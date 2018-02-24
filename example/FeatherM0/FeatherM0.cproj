@@ -444,6 +444,18 @@
     </ToolchainSettings>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="..\..\LSM303.c">
+      <SubType>compile</SubType>
+      <Link>LSM303.c</Link>
+    </Compile>
+    <Compile Include="..\..\LSM303.h">
+      <SubType>compile</SubType>
+      <Link>LSM303.h</Link>
+    </Compile>
+    <Compile Include="..\..\LSM303CTypes.h">
+      <SubType>compile</SubType>
+      <Link>LSM303CTypes.h</Link>
+    </Compile>
     <Compile Include="atmel_start.c">
       <SubType>compile</SubType>
     </Compile>
