@@ -168,11 +168,17 @@ typedef enum {
   ACC_ODR_MASK        = 0x60
 } ACC_ODR_t;
 
+typedef enum {
+	ACC_ADDR_INC      = 0x04,
+	ACC_ADDR_NO_INC   = 0x00
+} ACC_IF_ADD_INC_t;
+
 typedef enum { 
   ACC_DISABLE_ALL = 0x00,
   ACC_X_ENABLE    = 0x01,
   ACC_Y_ENABLE    = 0x02,
-  ACC_Z_ENABLE    = 0x04
+  ACC_Z_ENABLE    = 0x04,
+  ACC_ALL_ENABLE  = 0x07
 } ACC_AXIS_EN_t;
 
 typedef enum { 
