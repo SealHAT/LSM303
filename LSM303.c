@@ -5,170 +5,109 @@
  *  Author: hpan5
  */ 
 #include "LSM303.h"
-#include "math.h"
 
-static struct{
-	struct io_descriptor *imu_io;
-}imu;
+#define SENSITIVITY_ACC		(0.06103515625)		/* LSB/mg */
+#define SENSITIVITY_MAG		(0.00048828125)		/* LSB/Ga */
 
-/* Read a single register for accelerometer*/
-static uint8_t acc_readReg1(struct i2c_m_sync_desc *const wire, const uint8_t Reg){
-	i2c_m_sync_set_slaveaddr(wire, ACC_I2C_ADDR, I2C_M_SEVEN);
+static struct i2c_m_sync_desc lsm303c_sync;		/* Structure for IMU communications */
+
+/* Read a single register from the IMU */
+static uint8_t readReg(const I2C_ADDR_t DEVICE_ADDRESS, const uint8_t REG)
+{
 	uint8_t retval;
-	io_write(imu.imu_io, &Reg, 1);
-	io_read(imu.imu_io, &retval, 1);
+	i2c_m_sync_set_slaveaddr(&lsm303c_sync, DEVICE_ADDRESS, I2C_M_SEVEN);
+	i2c_m_sync_cmd_read(&lsm303c_sync, REG, &retval, 1);
 	return retval;
 }
 
-static void acc_readReg2(struct i2c_m_sync_desc *const wire, const uint8_t Reg, uint8_t* const first, uint8_t* const second)
+/* Write a single register to the IMU */
+static void writeReg(const I2C_ADDR_t DEVICE_ADDRESS, const uint8_t REG, uint8_t val)
 {
-	i2c_m_sync_set_slaveaddr(wire, ACC_I2C_ADDR, I2C_M_SEVEN);
-	uint8_t retvals[2];
-	io_write(imu.imu_io, &Reg, 1);
-	io_read(imu.imu_io, retvals, 2);
-	*first  = retvals[0];
-	*second = retvals[1];
+	i2c_m_sync_set_slaveaddr(&lsm303c_sync, DEVICE_ADDRESS, I2C_M_SEVEN);
+	i2c_m_sync_cmd_write(&lsm303c_sync, REG, &val, 1);
 }
 
+bool imu_init(struct i2c_m_sync_desc *const WIRE)
+{
+	lsm303c_sync  = *WIRE;
+	i2c_m_sync_enable(&lsm303c_sync);
+	return true;
+}
 
-/* Read a single register for magnetometer*/
-static uint8_t mag_readReg1(struct i2c_m_sync_desc *const wire, const uint8_t Reg){
-	i2c_m_sync_set_slaveaddr(wire, MAG_I2C_ADDR, I2C_M_SEVEN);
-	uint8_t retval;
-	io_write(imu.imu_io, &Reg, 1);
-	io_read(imu.imu_io, &retval, 1);
+bool acc_config(const ACC_FS_t RANGE, const ACC_BDU_t BLOCK_UPDATE, const uint8_t AXIS, const ACC_ODR_t RATE)
+{
+	/* Basic Read-modify-write operation to leave other values unchanged */
+	uint8_t reg1 = readReg(ACC_I2C_ADDR, ACC_CTRL1);
+	uint8_t reg4 = readReg(ACC_I2C_ADDR, ACC_CTRL4);
+	
+	reg1 |= (BLOCK_UPDATE | AXIS | RATE);
+	reg4 |= (RANGE);
+	
+	writeReg(ACC_I2C_ADDR, ACC_CTRL1, reg1);
+	writeReg(ACC_I2C_ADDR, ACC_CTRL1, reg4);
+	
+	return true;
+}
+
+ACC_STATUS_FLAGS_t acc_getStatus()
+{
+	return readReg(ACC_I2C_ADDR, ACC_STATUS);	
+}
+
+AxesRaw_t acc_read()
+{
+	AxesRaw_t retval;	/* Return value, all three axis */
+	uint8_t dataHigh;	/* For collecting the MSB of an axis */
+	uint8_t dataLow;	/* For collecting the LSB of an axis */
+	
+	dataLow  = readReg(ACC_I2C_ADDR, ACC_OUT_X_L);
+	dataHigh = readReg(ACC_I2C_ADDR, ACC_OUT_X_H);
+	retval.xAxis = (int16_t)(dataLow | (dataHigh << 8));
+	
+	dataLow  = readReg(ACC_I2C_ADDR, ACC_OUT_Y_L);
+	dataHigh = readReg(ACC_I2C_ADDR, ACC_OUT_Y_H);
+	retval.yAxis = (int16_t)(dataLow | (dataHigh << 8));
+	
+	dataLow  = readReg(ACC_I2C_ADDR, ACC_OUT_Z_L);
+	dataHigh = readReg(ACC_I2C_ADDR, ACC_OUT_Z_H);
+	retval.zAxis = (int16_t)(dataLow | (dataHigh << 8));
+	
+	return retval;
+}
+/*
+bool mag_config(const MAG_DO_t RATE, const MAG_FS_t SCALE, const MAG_BDU_t BLOCK_UPDATE, const MAG_OMXY_t PWR_MODE, const MAG_OMZ_t PERFORMANCE, const MAG_MD_t CONV_MODE)
+{
+	
+}*/
+
+AxesRaw_t mag_read()
+{
+	AxesRaw_t retval;	/* Return value, all three axis */
+	uint8_t dataHigh;	/* For collecting the MSB of an axis */
+	uint8_t dataLow;	/* For collecting the LSB of an axis */
+	
+	dataLow  = readReg(MAG_I2C_ADDR, MAG_OUTX_L);
+	dataHigh = readReg(MAG_I2C_ADDR, MAG_OUTX_H);
+	retval.xAxis = (int16_t)(dataLow | (dataHigh << 8));
+		
+	dataLow  = readReg(MAG_I2C_ADDR, MAG_OUTY_L);
+	dataHigh = readReg(MAG_I2C_ADDR, MAG_OUTY_H);
+	retval.yAxis = (int16_t)(dataLow | (dataHigh << 8));
+		
+	dataLow  = readReg(MAG_I2C_ADDR, MAG_OUTZ_L);
+	dataHigh = readReg(MAG_I2C_ADDR, MAG_OUTZ_L);
+	retval.zAxis = (int16_t)(dataLow | (dataHigh << 8));
+		
 	return retval;
 }
 
-static void mag_readReg2(struct i2c_m_sync_desc *const wire, const uint8_t Reg, uint8_t* const first, uint8_t* const second)
+int16_t imu_readTemp()
 {
-	i2c_m_sync_set_slaveaddr(wire, MAG_I2C_ADDR, I2C_M_SEVEN);
-	uint8_t retvals[2];
-	io_write(imu.imu_io, &Reg, 1);
-	io_read(imu.imu_io, retvals, 2);
-	*first  = retvals[0];
-	*second = retvals[1];
-}
-
-/* Read a single register*/
-static void acc_writeReg1(struct i2c_m_sync_desc *const wire, const uint8_t Reg, const uint8_t Val){
-	i2c_m_sync_set_slaveaddr(wire, ACC_I2C_ADDR, I2C_M_SEVEN);
-	uint8_t sendvals[2];
-	sendvals[0] = Reg;
-	sendvals[1] = Val;
-	io_write(imu.imu_io, sendvals, 2);
-}
-
-static void acc_writeReg2(struct i2c_m_sync_desc *const wire, const uint8_t Reg, const uint8_t first, const uint8_t second){
-	i2c_m_sync_set_slaveaddr(wire, ACC_I2C_ADDR, I2C_M_SEVEN);
-	uint8_t sendvals[3];
-	sendvals[0] = Reg;
-	sendvals[1] = first;
-	sendvals[2] = second;
-	io_write(imu.imu_io, sendvals, 3);
-}
-
-/* Read a single register*/
-static void mag_writeReg1(struct i2c_m_sync_desc *const wire, const uint8_t Reg, const uint8_t Val){
-	i2c_m_sync_set_slaveaddr(wire, MAG_I2C_ADDR, I2C_M_SEVEN);
-	uint8_t sendvals[2];
-	sendvals[0] = Reg;
-	sendvals[1] = Val;
-	io_write(imu.imu_io, sendvals, 2);
-}
-
-static void mag_writeReg2(struct i2c_m_sync_desc *const wire, const uint8_t Reg, const uint8_t first, const uint8_t second){
-	i2c_m_sync_set_slaveaddr(wire, MAG_I2C_ADDR, I2C_M_SEVEN);
-	uint8_t sendvals[3];
-	sendvals[0] = Reg;
-	sendvals[1] = first;
-	sendvals[2] = second;
-	io_write(imu.imu_io, sendvals, 3);
-}
-
-static void imu_init(struct i2c_m_sync_desc *const wire){
-	i2c_m_sync_get_io_descriptor(wire, &imu.imu_io);
-	i2c_m_sync_enable(wire);
-}
-
-static void acc_clearREADYbit()
-{
-	acc_readReg1(&wire,ACC_OUT_X_L);
-	acc_readReg1(&wire,ACC_OUT_X_H);
-	acc_readReg1(&wire,ACC_OUT_Y_L);
-	acc_readReg1(&wire,ACC_OUT_Y_H);
-	acc_readReg1(&wire,ACC_OUT_Z_L);
-	acc_readReg1(&wire,ACC_OUT_Z_H);
-}
-
-static void acc_readXYZ(int* X, int* Y, int* Z)
-{
-	uint8_t valX[2];
-	uint8_t valY[2];
-	uint8_t valZ[2];
+	uint8_t dataHigh;	/* For collecting the MSB of an axis */
+	uint8_t dataLow;	/* For collecting the LSB of an axis */
 	
-	valX[0] = acc_readReg1(&wire,ACC_OUT_X_L);
-	valX[1] = acc_readReg1(&wire,ACC_OUT_X_H);
-	*X = (valX[0] | (valX[1]<<8));
-	if(*X >=32768)
-	{
-		*X -= 65536;
-	}
+	dataLow  = readReg(MAG_I2C_ADDR, MAG_TEMP_OUT_L);
+	dataHigh = readReg(MAG_I2C_ADDR, MAG_TEMP_OUT_H);
 	
-	valY[0] = acc_readReg1(&wire,ACC_OUT_Y_L);
-	valY[1] = acc_readReg1(&wire,ACC_OUT_Y_H);
-	*Y = (valY[0] | (valY[1]<<8));
-	if(*Y >=32768)
-	{
-		*Y -= 65536;
-	}
-	
-	valZ[0] = acc_readReg1(&wire,ACC_OUT_Z_L);
-	valZ[1] = acc_readReg1(&wire,ACC_OUT_Z_H);
-	*Z = (valZ[0] | (valZ[1]<<8));
-	if(*Z >=32768)
-	{
-		*Z -= 65536;
-	}
-}
-
-static void mag_clearREADYbit()
-{
-	mag_readReg1(&wire,MAG_OUTX_L);
-	mag_readReg1(&wire,MAG_OUTX_H);
-	mag_readReg1(&wire,MAG_OUTY_L);
-	mag_readReg1(&wire,MAG_OUTY_H);
-	mag_readReg1(&wire,MAG_OUTZ_L);
-	mag_readReg1(&wire,MAG_OUTZ_H);
-}
-
-static void mag_readXYZ(int* X, int* Y, int* Z)
-{
-	uint8_t valX[2];
-	uint8_t valY[2];
-	uint8_t valZ[2];
-	
-	valX[0] = mag_readReg1(&wire,MAG_OUTX_L);
-	valX[1] = mag_readReg1(&wire,MAG_OUTX_H);
-	*X = (valX[0] | (valX[1]<<8));
-	if(*X >=32768)
-	{
-		*X -= 65536;
-	}
-	
-	valY[0] = mag_readReg1(&wire,MAG_OUTY_L);
-	valY[1] = mag_readReg1(&wire,MAG_OUTY_H);
-	*Y = (valY[0] | (valY[1]<<8));
-	if(*Y >=32768)
-	{
-		*Y -= 65536;
-	}
-	
-	valZ[0] = mag_readReg1(&wire,MAG_OUTZ_L);
-	valZ[1] = mag_readReg1(&wire,MAG_OUTZ_H);
-	*Z = (valZ[0] | (valZ[1]<<8));
-	if(*Z >=32768)
-	{
-		*Z -= 65536;
-	}
+	return ((dataHigh << 8) | dataLow );
 }

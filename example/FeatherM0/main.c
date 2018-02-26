@@ -1,47 +1,47 @@
 #include <atmel_start.h>
-#include "LSM303.c"
+#include "LSM303.h"
 #include "usb_start.h"
 #include "math.h" 
 
 const uint8_t ReadybitMASK = 0b00001000;
 
+
 int32_t acc_SelfTest()
 {
 	uint8_t Status = 0b00000000;
-	int OUTX_NOST, OUTY_NOST, OUTZ_NOST;
-	int OUTX_ST, OUTY_ST, OUTZ_ST;
+	AxesRaw_t AxesNOST;
+	AxesRaw_t AxesST;
 	
-	acc_writeReg1(&wire,ACC_CTRL1, 0x2F); //Initialize sensor, turn on sensor
-	acc_writeReg1(&wire,ACC_CTRL4, 0x04); //FS = 2g
-	acc_writeReg1(&wire,ACC_CTRL5, 0x00); //Disable acc self-test
+	writeReg(ACC_I2C_ADDR, ACC_CTRL1, 0x2F); //Initialize sensor, turn on sensor
+	writeReg(ACC_I2C_ADDR, ACC_CTRL4, 0x04); //FS = 2g
+	writeReg(ACC_I2C_ADDR, ACC_CTRL5, 0x00); //Disable acc self-test
 	delay_ms(200);
 	
 	do{
-		acc_clearREADYbit();
-		Status = acc_readReg1(&wire,ACC_STATUS);
+		acc_read();
+		Status = acc_getStatus();
 	}while((Status&ReadybitMASK) == 0);
 	
 	if((Status&ReadybitMASK) != 0)
 	{
-		acc_readXYZ(&OUTX_NOST,&OUTY_NOST,&OUTZ_NOST);
+		AxesNOST = acc_read();
 	}
 	
-	acc_writeReg1(&wire,ACC_CTRL5, 0x04); //Enable acc self-test
+	writeReg(ACC_I2C_ADDR, ACC_CTRL5, 0x04); //Enable acc self-test
 	delay_ms(80);
 	
 	do{
-		acc_clearREADYbit();
-		Status = acc_readReg1(&wire,ACC_STATUS);
+		acc_read();
+		Status = acc_getStatus();
 	}while((Status&ReadybitMASK) == 0);
 	
 	if((Status&ReadybitMASK) != 0){
-		acc_readXYZ(&OUTX_ST,&OUTY_ST,&OUTZ_ST);
-		gpio_set_pin_level(LED_BUILTIN,true);
+		AxesST = acc_read();
 	}
 	
-	int abs_X = abs(OUTX_ST - OUTX_NOST);
-	int abs_Y = abs(OUTY_ST - OUTY_NOST);
-	int abs_Z = abs(OUTZ_ST - OUTZ_NOST);
+	int abs_X = abs(AxesNOST.xAxis - AxesST.xAxis);
+	int abs_Y = abs(AxesNOST.yAxis - AxesST.yAxis);
+	int abs_Z = abs(AxesNOST.zAxis - AxesST.zAxis);
 	
 	if(	   (((abs_X*0.061) <= 1500) && ((abs_X*0.061) >= 70))
 	&& (((abs_Y*0.061) <= 1500) && ((abs_Y*0.061) >= 70))
@@ -54,10 +54,11 @@ int32_t acc_SelfTest()
 	{
 		return -1;
 	}
-	acc_writeReg1(&wire,ACC_CTRL5, 0x00); //Disable acc self-test
+	writeReg(ACC_I2C_ADDR, ACC_CTRL5, 0x00); //Disable acc self-test
+	
 }
 
-int32_t mag_SelfTest()
+/*int32_t mag_SelfTest()
 {
 	uint8_t Status = 0b00000000;
 	int OUTX_NOST, OUTY_NOST, OUTZ_NOST;
@@ -113,11 +114,10 @@ int32_t mag_SelfTest()
 		return -1;
 	}
 	
-}
+}*/
 
 int main(void)
 {
-	
 	
 	atmel_start_init();
 	imu_init(&wire);
