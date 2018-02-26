@@ -34,7 +34,7 @@ bool imu_init(struct i2c_m_sync_desc *const WIRE)
 	return true;
 }
 
-bool acc_config(const ACC_FS_t RANGE, const ACC_BDU_t BLOCK_UPDATE, const uint8_t AXIS, const ACC_ODR_t RATE)
+bool acc_config(const ACC_FS_t RANGE, const ACC_BDU_t BLOCK_UPDATE, const ACC_AXIS_EN_t AXIS, const ACC_ODR_t RATE)
 {
 	/* Basic Read-modify-write operation to leave other values unchanged */
 	uint8_t reg1 = readReg(ACC_I2C_ADDR, ACC_CTRL1);
@@ -44,7 +44,7 @@ bool acc_config(const ACC_FS_t RANGE, const ACC_BDU_t BLOCK_UPDATE, const uint8_
 	reg4 |= (RANGE);
 	
 	writeReg(ACC_I2C_ADDR, ACC_CTRL1, reg1);
-	writeReg(ACC_I2C_ADDR, ACC_CTRL1, reg4);
+	writeReg(ACC_I2C_ADDR, ACC_CTRL4, reg4);
 	
 	return true;
 }
@@ -127,9 +127,25 @@ int32_t acc_SelfTest()
 	acc_writeReg1(&wire,ACC_CTRL5, 0x00); //Disable acc self-test
 }
 
-bool mag_config(const MAG_DO_t RATE, const MAG_FS_t SCALE, const MAG_BDU_t BLOCK_UPDATE, const MAG_OMXY_t PWR_MODE, const MAG_OMZ_t PERFORMANCE, const MAG_MD_t CONV_MODE)
+bool mag_config(const MAG_DO_t RATE, const MAG_FS_t SCALE, const MAG_BDU_t BLOCK_UPDATE, const MAG_OMXY_t OMXY, const MAG_OMZ_t OMZ, const MAG_MD_t CONV_MODE)
 {
+	/* Basic Read-modify-write operation to leave other values unchanged */
+	uint8_t reg1 = readReg(MAG_I2C_ADDR, ACC_CTRL1);
+	uint8_t reg2 = readReg(MAG_I2C_ADDR, ACC_CTRL2);
+	uint8_t reg3 = readReg(MAG_I2C_ADDR, ACC_CTRL3);
+	uint8_t reg4 = readReg(MAG_I2C_ADDR, ACC_CTRL4);
+	uint8_t reg5 = readReg(MAG_I2C_ADDR, ACC_CTRL5);
 	
+	reg1 |= (RATE | OMXY);
+	reg2 |= SCALE;
+	reg3 |= CONV_MODE;
+	reg4 |= OMZ;
+	reg5 |= BLOCK_UPDATE;
+	
+	writeReg(MAG_I2C_ADDR, ACC_CTRL1, reg1);
+	writeReg(MAG_I2C_ADDR, ACC_CTRL4, reg4);
+	
+	return true;
 }
 
 AxesRaw_t mag_read()

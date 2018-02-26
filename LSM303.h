@@ -72,7 +72,7 @@ AxesRaw_t acc_read();
  * @param CONV_MODE [IN] conversion operation mode - continuous, single conversion, or power-down
  * @return TRUE if the configuration is successful
  */
-bool mag_config(const MAG_DO_t RATE, const MAG_FS_t SCALE, const MAG_BDU_t BLOCK_UPDATE, const MAG_OMXY_t PWR_MODE, const MAG_OMZ_t PERFORMANCE, const MAG_MD_t CONV_MODE);
+bool mag_config(const MAG_DO_t RATE, const MAG_FS_t SCALE, const MAG_BDU_t BLOCK_UPDATE, const MAG_OMXY_t OMXY, const MAG_OMZ_t OMZ, const MAG_MD_t CONV_MODE);
 
 /** @brief Runs the self test on the magnetometer
  *
