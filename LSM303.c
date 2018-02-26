@@ -90,3 +90,85 @@ static void imu_init(struct i2c_m_sync_desc *const wire){
 	i2c_m_sync_get_io_descriptor(wire, &imu.imu_io);
 	i2c_m_sync_enable(wire);
 }
+
+static void acc_clearREADYbit()
+{
+	acc_readReg1(&wire,ACC_OUT_X_L);
+	acc_readReg1(&wire,ACC_OUT_X_H);
+	acc_readReg1(&wire,ACC_OUT_Y_L);
+	acc_readReg1(&wire,ACC_OUT_Y_H);
+	acc_readReg1(&wire,ACC_OUT_Z_L);
+	acc_readReg1(&wire,ACC_OUT_Z_H);
+}
+
+static void acc_readXYZ(int* X, int* Y, int* Z)
+{
+	uint8_t valX[2];
+	uint8_t valY[2];
+	uint8_t valZ[2];
+	
+	valX[0] = acc_readReg1(&wire,ACC_OUT_X_L);
+	valX[1] = acc_readReg1(&wire,ACC_OUT_X_H);
+	*X = (valX[0] | (valX[1]<<8));
+	if(*X >=32768)
+	{
+		*X -= 65536;
+	}
+	
+	valY[0] = acc_readReg1(&wire,ACC_OUT_Y_L);
+	valY[1] = acc_readReg1(&wire,ACC_OUT_Y_H);
+	*Y = (valY[0] | (valY[1]<<8));
+	if(*Y >=32768)
+	{
+		*Y -= 65536;
+	}
+	
+	valZ[0] = acc_readReg1(&wire,ACC_OUT_Z_L);
+	valZ[1] = acc_readReg1(&wire,ACC_OUT_Z_H);
+	*Z = (valZ[0] | (valZ[1]<<8));
+	if(*Z >=32768)
+	{
+		*Z -= 65536;
+	}
+}
+
+static void mag_clearREADYbit()
+{
+	mag_readReg1(&wire,MAG_OUTX_L);
+	mag_readReg1(&wire,MAG_OUTX_H);
+	mag_readReg1(&wire,MAG_OUTY_L);
+	mag_readReg1(&wire,MAG_OUTY_H);
+	mag_readReg1(&wire,MAG_OUTZ_L);
+	mag_readReg1(&wire,MAG_OUTZ_H);
+}
+
+static void mag_readXYZ(int* X, int* Y, int* Z)
+{
+	uint8_t valX[2];
+	uint8_t valY[2];
+	uint8_t valZ[2];
+	
+	valX[0] = mag_readReg1(&wire,MAG_OUTX_L);
+	valX[1] = mag_readReg1(&wire,MAG_OUTX_H);
+	*X = (valX[0] | (valX[1]<<8));
+	if(*X >=32768)
+	{
+		*X -= 65536;
+	}
+	
+	valY[0] = mag_readReg1(&wire,MAG_OUTY_L);
+	valY[1] = mag_readReg1(&wire,MAG_OUTY_H);
+	*Y = (valY[0] | (valY[1]<<8));
+	if(*Y >=32768)
+	{
+		*Y -= 65536;
+	}
+	
+	valZ[0] = mag_readReg1(&wire,MAG_OUTZ_L);
+	valZ[1] = mag_readReg1(&wire,MAG_OUTZ_H);
+	*Z = (valZ[0] | (valZ[1]<<8));
+	if(*Z >=32768)
+	{
+		*Z -= 65536;
+	}
+}

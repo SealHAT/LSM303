@@ -12,6 +12,8 @@
 #include <atmel_start.h>	/* where the IO functions live */
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include "LSM303CTypes.h"
 
 static uint8_t acc_readReg1(struct i2c_m_sync_desc *const wire, const uint8_t Reg);
@@ -32,5 +34,14 @@ static void mag_writeReg2(struct i2c_m_sync_desc *const wire, const uint8_t Reg,
 
 static void imu_init(struct i2c_m_sync_desc *const wire);
 
+static void acc_clearREADYbit();
+
+static void acc_readXYZ(int* X, int* Y, int* Z);
+
+int32_t acc_SelfTest();
+
+static void mag_clearREADYbit();
+
+static void mag_readXYZ(int* X, int* Y, int* Z);
 
 #endif /* LSM303_H_ */

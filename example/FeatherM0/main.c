@@ -1,88 +1,113 @@
 #include <atmel_start.h>
 #include "LSM303.c"
 #include "math.h" 
-#include <stdio.h>
-#include <stdlib.h>
 
 const uint8_t ReadybitMASK = 0b00001000;
-const uint8_t IamLX= 0b01000001;
-const uint8_t IamMAG = 0b00111101;
 
-static void clearREADYbit()
+int32_t acc_SelfTest()
 {
-	acc_readReg1(&wire,ACC_OUT_X_L);
-	acc_readReg1(&wire,ACC_OUT_X_H);
-	acc_readReg1(&wire,ACC_OUT_Y_L);
-	acc_readReg1(&wire,ACC_OUT_Y_H);
-	acc_readReg1(&wire,ACC_OUT_Z_L);
-	acc_readReg1(&wire,ACC_OUT_Z_H);
-}
-static void readXYZ(int* X, int* Y, int* Z)
-{
-	uint8_t valX[2];
-	uint8_t valY[2];
-	uint8_t valZ[2];
-	
-	valX[0] = acc_readReg1(&wire,ACC_OUT_X_L);
-	valX[1] = acc_readReg1(&wire,ACC_OUT_X_H);
-	*X = (valX[0] | (valX[1]<<8));
-	
-	valY[0] = acc_readReg1(&wire,ACC_OUT_Y_L);
-	valY[1] = acc_readReg1(&wire,ACC_OUT_Y_H);
-	*Y = (valY[0] | (valY[1]<<8));
-	
-	valZ[0] = acc_readReg1(&wire,ACC_OUT_Z_L);
-	valZ[1] = acc_readReg1(&wire,ACC_OUT_Z_H);
-	*Z = (valZ[0] | (valZ[1]<<8));
-}
-int main(void)
-{
-	//gpio_set_pin_level(LED0, true);
 	uint8_t Status = 0b00000000;
 	int OUTX_NOST, OUTY_NOST, OUTZ_NOST;
 	int OUTX_ST, OUTY_ST, OUTZ_ST;
-	/* Initializes MCU, drivers and middleware */
-	atmel_start_init();
-	imu_init(&wire);
 	
-	////////////////////Accelerometer self-test
 	acc_writeReg1(&wire,ACC_CTRL1, 0x2F); //Initialize sensor, turn on sensor
 	acc_writeReg1(&wire,ACC_CTRL4, 0x04); //FS = 2g
+	acc_writeReg1(&wire,ACC_CTRL5, 0x00); //Disable acc self-test
 	delay_ms(200);
-	for(int i=0;i<4;i++){
-		clearREADYbit();
+	
+	do{
+		acc_clearREADYbit();
 		Status = acc_readReg1(&wire,ACC_STATUS);
-		//gpio_toggle_pin_level(LED_BUILTIN);
-		//gpio_set_pin_level(LED_BUILTIN,false);
-		//delay_ms(100);
-	}
-	if((Status&ReadybitMASK) != 0){
-		
-	}
-	readXYZ(&OUTX_NOST,&OUTY_NOST,&OUTZ_NOST);
+	}while((Status&ReadybitMASK) == 0);
 	
-	acc_writeReg1(&wire,ACC_CTRL5, 0x04); //Enable self-test
-	delay_ms(80);
-	for(int i=0;i<4;i++){
-		clearREADYbit();
-		Status = acc_readReg1(&wire,ACC_STATUS);
-		//gpio_toggle_pin_level(LED_BUILTIN);
-		//gpio_set_pin_level(LED_BUILTIN,false);
-		//delay_ms(100);
-	}
-	if((Status&ReadybitMASK) != 0){
-		gpio_set_pin_level(LED_BUILTIN,true);
-		readXYZ(&OUTX_ST,&OUTY_ST,&OUTZ_ST);
-	}
-	int ab = abs(OUTX_ST - OUTX_NOST);
-	
-	
-	if(((ab*0.06) <= 1500) )//&& ((ab*0.061) >= 70)
+	if((Status&ReadybitMASK) != 0)
 	{
-		
+		acc_readXYZ(&OUTX_NOST,&OUTY_NOST,&OUTZ_NOST);
 	}
 	
+	acc_writeReg1(&wire,ACC_CTRL5, 0x04); //Enable acc self-test
+	delay_ms(80);
 	
+	do{
+		acc_clearREADYbit();
+		Status = acc_readReg1(&wire,ACC_STATUS);
+	}while((Status&ReadybitMASK) == 0);
 	
+	if((Status&ReadybitMASK) != 0){
+		acc_readXYZ(&OUTX_ST,&OUTY_ST,&OUTZ_ST);
+		gpio_set_pin_level(LED_BUILTIN,true);
+	}
+	
+	int abs_X = abs(OUTX_ST - OUTX_NOST);
+	int abs_Y = abs(OUTY_ST - OUTY_NOST);
+	int abs_Z = abs(OUTZ_ST - OUTZ_NOST);
+	
+	if(	   (((abs_X*0.061) <= 1500) && ((abs_X*0.061) >= 70))
+	&& (((abs_Y*0.061) <= 1500) && ((abs_Y*0.061) >= 70))
+	&& (((abs_Z*0.061) <= 1500) && ((abs_Z*0.061) >= 70))
+	)
+	{
+		return 0;
+	}
+	else
+	{
+		return -1;
+	}
+	acc_writeReg1(&wire,ACC_CTRL5, 0x00); //Disable acc self-test
+}
+int main(void)
+{
+	uint8_t Status = 0b00000000;
+	int OUTX_NOST, OUTY_NOST, OUTZ_NOST;
+	int OUTX_ST, OUTY_ST, OUTZ_ST;
+	
+	atmel_start_init();
+	imu_init(&wire);
+	//magnetometer self-test
+	mag_writeReg1(&wire,MAG_CTRL_REG1, 0x18);
+	mag_writeReg1(&wire,MAG_CTRL_REG2, 0x60);
+	mag_writeReg1(&wire,MAG_CTRL_REG3, 0x00);
+	mag_writeReg1(&wire,MAG_CTRL_REG5, 0x40);
+	delay_ms(20);
+	
+	do 
+	{
+		mag_clearREADYbit();
+		Status = mag_readReg1(&wire,MAG_STATUS_REG);
+		//gpio_toggle_pin_level(LED_BUILTIN);
+		//delay_ms(10);
+	} while ((Status&ReadybitMASK) == 0);
+	if((Status&ReadybitMASK) != 0)
+	{
+		mag_readXYZ(&OUTX_NOST, &OUTY_NOST, &OUTZ_NOST);
+	}
+	
+	mag_writeReg1(&wire,MAG_CTRL_REG1, 0x19); //Enable mag self-test
+	delay_ms(60);
+	
+	do
+	{
+		mag_clearREADYbit();
+		Status = mag_readReg1(&wire,MAG_STATUS_REG);
+		//gpio_toggle_pin_level(LED_BUILTIN);
+		//delay_ms(10);
+	} while ((Status&ReadybitMASK) == 0);
+	if((Status&ReadybitMASK) != 0)
+	{
+		mag_readXYZ(&OUTX_ST, &OUTY_ST, &OUTZ_ST);
+	}
+	
+	int abs_X = abs(OUTX_ST - OUTX_NOST);
+	int abs_Y = abs(OUTY_ST - OUTY_NOST);
+	int abs_Z = abs(OUTZ_ST - OUTZ_NOST);
+	
+	while(	(((abs_X*0.58/1000) >= 1) && ((abs_X*0.58/1000) <= 3))
+		 &&	(((abs_Z*0.58/1000) >= 0.1) && ((abs_Z*0.58/1000) <= 1))
+		 &&	(((abs_Y*0.58/1000) >= 1) && ((abs_Y*0.58/1000) <= 3))
+		)
+	{
+		gpio_toggle_pin_level(LED_BUILTIN);
+		delay_ms(100);
+	}
 }
 
