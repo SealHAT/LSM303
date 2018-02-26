@@ -5,7 +5,6 @@
  *  Author: hpan5
  */ 
 #include "LSM303.h"
-#include "LSM303CTypes.h"
 
 #define SENSITIVITY_ACC		(0.06103515625)		/* LSB/mg */
 #define SENSITIVITY_MAG		(0.00048828125)		/* LSB/Ga */
@@ -35,9 +34,24 @@ bool imu_init(struct i2c_m_sync_desc *const WIRE)
 	return true;
 }
 
-bool acc_config()
+bool acc_config(const ACC_FS_t RANGE, const ACC_BDU_t BLOCK_UPDATE, const uint8_t AXIS, const ACC_ODR_t RATE)
 {
+	/* Basic Read-modify-write operation to leave other values unchanged */
+	uint8_t reg1 = readReg(ACC_I2C_ADDR, ACC_CTRL1);
+	uint8_t reg4 = readReg(ACC_I2C_ADDR, ACC_CTRL4);
 	
+	reg1 |= (BLOCK_UPDATE | AXIS | RATE);
+	reg4 |= (RANGE);
+	
+	writeReg(ACC_I2C_ADDR, ACC_CTRL1, reg1);
+	writeReg(ACC_I2C_ADDR, ACC_CTRL1, reg4);
+	
+	return true;
+}
+
+ACC_STATUS_FLAGS_t acc_getStatus()
+{
+	return readReg(ACC_I2C_ADDR, ACC_STATUS);	
 }
 
 AxesRaw_t acc_read()
@@ -59,16 +73,6 @@ AxesRaw_t acc_read()
 	retval.zAxis = (int16_t)(dataLow | (dataHigh << 8));
 	
 	return retval;
-}
-
-void acc_clearREADYbit()
-{
-	readReg(ACC_I2C_ADDR, ACC_OUT_X_L);
-	readReg(ACC_I2C_ADDR, ACC_OUT_X_H);
-	readReg(ACC_I2C_ADDR, ACC_OUT_Y_L);
-	readReg(ACC_I2C_ADDR, ACC_OUT_Y_H);
-	readReg(ACC_I2C_ADDR, ACC_OUT_Z_L);
-	readReg(ACC_I2C_ADDR, ACC_OUT_Z_H);
 }
 
 int32_t acc_SelfTest()
@@ -123,19 +127,9 @@ int32_t acc_SelfTest()
 	acc_writeReg1(&wire,ACC_CTRL5, 0x00); //Disable acc self-test
 }
 
-bool mag_config()
+bool mag_config(const MAG_DO_t RATE, const MAG_FS_t SCALE, const MAG_BDU_t BLOCK_UPDATE, const MAG_OMXY_t PWR_MODE, const MAG_OMZ_t PERFORMANCE, const MAG_MD_t CONV_MODE)
 {
 	
-}
-
-void mag_clearREADYbit()
-{
-	readReg(MAG_I2C_ADDR, MAG_OUTX_L);
-	readReg(MAG_I2C_ADDR, MAG_OUTX_H);
-	readReg(MAG_I2C_ADDR, MAG_OUTY_L);
-	readReg(MAG_I2C_ADDR, MAG_OUTY_H);
-	readReg(MAG_I2C_ADDR, MAG_OUTZ_L);
-	readReg(MAG_I2C_ADDR, MAG_OUTZ_H);
 }
 
 AxesRaw_t mag_read()

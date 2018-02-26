@@ -4,7 +4,7 @@
  * Created: 2/23/2018 2:58:51 PM
  *  Author: hpan5
  */ 
-
+#include "LSM303CTypes.h"
 
 #ifndef LSM303_H_
 #define LSM303_H_
@@ -37,9 +37,21 @@ int32_t acc_SelfTest();
 
 /** @brief Configure the operation of the Accelerometer
  *
+ * @param RANGE [IN] Full scale range option for the accelerometer
+ * @param BLOCK_UPDATE [IN] option to limit updates until the last value is fully read
+ * @param AXIS [IN] enable or disable the individual axis, logical OR of axis desired or 0x00 to disable accelerometer
+ * @param RATE [IN] The update rate of the accelerometer
  * @return TRUE if the configuration is successful
  */
-bool acc_config();
+bool acc_config(const ACC_FS_t RANGE, const ACC_BDU_t BLOCK_UPDATE, const uint8_t AXIS, const ACC_ODR_t RATE);
+
+/** @brief Configure the operation of the Accelerometer
+ *
+ * Gets the status of the accelerometer - Flags set for new data and data overruns
+ *
+ * @return the status of the accelerometer as a ACC_STATUS_FLAGS_t type
+ */
+ACC_STATUS_FLAGS_t acc_getStatus();
 
 /** @brief reads a value from the accelerometer
  *
@@ -52,9 +64,15 @@ AxesRaw_t acc_read();
 
 /** @brief Configure the operation of the magnetometer
  *
+ * @param RATE [IN] The update rate of the magnetometer
+ * @param SCALE [IN] Full scale range option for the magnetometer
+ * @param BLOCK_UPDATE [IN] option to limit updates until the last value is fully read
+ * @param PWR_MODE [IN] Operation mode of the x/y axis (power mode)
+ * @param PERFORMANCE [IN] Operation mode of the z axis (power mode)
+ * @param CONV_MODE [IN] conversion operation mode - continuous, single conversion, or power-down
  * @return TRUE if the configuration is successful
  */
-bool mag_config();
+bool mag_config(const MAG_DO_t RATE, const MAG_FS_t SCALE, const MAG_BDU_t BLOCK_UPDATE, const MAG_OMXY_t PWR_MODE, const MAG_OMZ_t PERFORMANCE, const MAG_MD_t CONV_MODE);
 
 /** @brief Runs the self test on the magnetometer
  *
