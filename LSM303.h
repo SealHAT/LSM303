@@ -12,8 +12,11 @@
 #include <atmel_start.h>	/* where the IO functions live */
 #include <stdint.h>
 #include <stdbool.h>
+<<<<<<< HEAD
 #include <stdio.h>
 #include <stdlib.h>
+=======
+>>>>>>> a53441ff19ab7f1ae13ffb9165ee67950600756f
 
 typedef struct {
 	int16_t xAxis;
@@ -45,7 +48,11 @@ int32_t acc_SelfTest();
  * @param RATE [IN] The update rate of the accelerometer
  * @return TRUE if the configuration is successful
  */
+<<<<<<< HEAD
 bool acc_config(const ACC_FS_t RANGE, const ACC_BDU_t BLOCK_UPDATE, const uint8_t AXIS, const ACC_ODR_t RATE);
+=======
+bool acc_config(const ACC_FS_t RANGE, const ACC_BDU_t BLOCK_UPDATE, const uint8_t AXIS, const ACC_ODR_t RATE, const ACC_IF_ADD_INC_t INCREMENT);
+>>>>>>> a53441ff19ab7f1ae13ffb9165ee67950600756f
 
 /** @brief Configure the operation of the Accelerometer
  *
@@ -74,7 +81,11 @@ AxesRaw_t acc_read();
  * @param CONV_MODE [IN] conversion operation mode - continuous, single conversion, or power-down
  * @return TRUE if the configuration is successful
  */
+<<<<<<< HEAD
 bool mag_config(const MAG_DO_t RATE, const MAG_FS_t SCALE, const MAG_BDU_t BLOCK_UPDATE, const MAG_OMXY_t PWR_MODE, const MAG_OMZ_t PERFORMANCE, const MAG_MD_t CONV_MODE);
+=======
+bool mag_config(const MAG_DO_t RATE, const MAG_FS_t SCALE, const MAG_BDU_t BLOCK_UPDATE, const MAG_OMXY_t OMXY, const MAG_OMZ_t OMZ, const MAG_MD_t CONV_MODE);
+>>>>>>> a53441ff19ab7f1ae13ffb9165ee67950600756f
 
 /** @brief Runs the self test on the magnetometer
  *
@@ -104,6 +115,10 @@ int16_t imu_readTemp();
  *
  * @return The IMU internal temperature in Celsius
  */
+<<<<<<< HEAD
 inline float imu_tempInC(const int16_t RAW_TEMP) { return (RAW_TEMP / 8) + 25 ;}
+=======
+inline float imu_tempInC(const int16_t RAW_TEMP) { return (RAW_TEMP / 8) + 25 }
+>>>>>>> a53441ff19ab7f1ae13ffb9165ee67950600756f
 
 #endif /* LSM303_H_ */
