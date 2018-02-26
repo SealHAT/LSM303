@@ -43,7 +43,7 @@ int32_t acc_SelfTest();
  * @param RATE [IN] The update rate of the accelerometer
  * @return TRUE if the configuration is successful
  */
-bool acc_config(const ACC_FS_t RANGE, const ACC_BDU_t BLOCK_UPDATE, const uint8_t AXIS, const ACC_ODR_t RATE);
+bool acc_config(const ACC_FS_t RANGE, const ACC_BDU_t BLOCK_UPDATE, const uint8_t AXIS, const ACC_ODR_t RATE, const ACC_IF_ADD_INC_t INCREMENT);
 
 /** @brief Configure the operation of the Accelerometer
  *

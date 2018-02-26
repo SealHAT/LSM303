@@ -34,14 +34,14 @@ bool imu_init(struct i2c_m_sync_desc *const WIRE)
 	return true;
 }
 
-bool acc_config(const ACC_FS_t RANGE, const ACC_BDU_t BLOCK_UPDATE, const ACC_AXIS_EN_t AXIS, const ACC_ODR_t RATE)
+bool acc_config(const ACC_FS_t RANGE, const ACC_BDU_t BLOCK_UPDATE, const ACC_AXIS_EN_t AXIS, const ACC_ODR_t RATE, const ACC_IF_ADD_INC_t INCREMENT)
 {
 	/* Basic Read-modify-write operation to leave other values unchanged */
 	uint8_t reg1 = readReg(ACC_I2C_ADDR, ACC_CTRL1);
 	uint8_t reg4 = readReg(ACC_I2C_ADDR, ACC_CTRL4);
 	
 	reg1 |= (BLOCK_UPDATE | AXIS | RATE);
-	reg4 |= (RANGE);
+	reg4 |= (RANGE | INCREMENT);
 	
 	writeReg(ACC_I2C_ADDR, ACC_CTRL1, reg1);
 	writeReg(ACC_I2C_ADDR, ACC_CTRL4, reg4);
