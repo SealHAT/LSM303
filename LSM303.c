@@ -7,168 +7,76 @@
 #include "LSM303.h"
 #include "math.h"
 
-static struct{
-	struct io_descriptor *imu_io;
-}imu;
+
+static struct i2c_m_sync_desc lsm303c_sync; /* Structure for IMU communications */
 
 /* Read a single register for accelerometer*/
- uint8_t acc_readReg1(struct i2c_m_sync_desc *const wire, const uint8_t Reg){
-	i2c_m_sync_set_slaveaddr(wire, ACC_I2C_ADDR, I2C_M_SEVEN);
+ uint8_t readReg(const LSM303_DEV_ADDR_t SLAVE_ADDRESS, const uint8_t REG){
 	uint8_t retval;
-	io_write(imu.imu_io, &Reg, 1);
-	io_read(imu.imu_io, &retval, 1);
+	i2c_m_sync_set_slaveaddr(&lsm303c_sync, SLAVE_ADDRESS, I2C_M_SEVEN);
+	i2c_m_sync_cmd_read(&lsm303c_sync, REG, &retval, 1);
 	return retval;
 }
 
- void acc_readReg2(struct i2c_m_sync_desc *const wire, const uint8_t Reg, uint8_t* const first, uint8_t* const second)
-{
-	i2c_m_sync_set_slaveaddr(wire, ACC_I2C_ADDR, I2C_M_SEVEN);
-	uint8_t retvals[2];
-	io_write(imu.imu_io, &Reg, 1);
-	io_read(imu.imu_io, retvals, 2);
-	*first  = retvals[0];
-	*second = retvals[1];
-}
-
-
-/* Read a single register for magnetometer*/
- uint8_t mag_readReg1(struct i2c_m_sync_desc *const wire, const uint8_t Reg){
-	i2c_m_sync_set_slaveaddr(wire, MAG_I2C_ADDR, I2C_M_SEVEN);
-	uint8_t retval;
-	io_write(imu.imu_io, &Reg, 1);
-	io_read(imu.imu_io, &retval, 1);
-	return retval;
-}
-
- void mag_readReg2(struct i2c_m_sync_desc *const wire, const uint8_t Reg, uint8_t* const first, uint8_t* const second)
-{
-	i2c_m_sync_set_slaveaddr(wire, MAG_I2C_ADDR, I2C_M_SEVEN);
-	uint8_t retvals[2];
-	io_write(imu.imu_io, &Reg, 1);
-	io_read(imu.imu_io, retvals, 2);
-	*first  = retvals[0];
-	*second = retvals[1];
-}
-
 /* Read a single register*/
- void acc_writeReg1(struct i2c_m_sync_desc *const wire, const uint8_t Reg, const uint8_t Val){
-	i2c_m_sync_set_slaveaddr(wire, ACC_I2C_ADDR, I2C_M_SEVEN);
-	uint8_t sendvals[2];
-	sendvals[0] = Reg;
-	sendvals[1] = Val;
-	io_write(imu.imu_io, sendvals, 2);
+ void writeReg(const LSM303_DEV_ADDR_t SLAVE_ADDRESS, const uint8_t Reg, uint8_t val){
+	i2c_m_sync_set_slaveaddr(&lsm303c_sync, SLAVE_ADDRESS, I2C_M_SEVEN);
+	i2c_m_sync_cmd_write(&lsm303c_sync, Reg, &val, 1);
 }
 
- void acc_writeReg2(struct i2c_m_sync_desc *const wire, const uint8_t Reg, const uint8_t first, const uint8_t second){
-	i2c_m_sync_set_slaveaddr(wire, ACC_I2C_ADDR, I2C_M_SEVEN);
-	uint8_t sendvals[3];
-	sendvals[0] = Reg;
-	sendvals[1] = first;
-	sendvals[2] = second;
-	io_write(imu.imu_io, sendvals, 3);
-}
-
-/* Read a single register*/
- void mag_writeReg1(struct i2c_m_sync_desc *const wire, const uint8_t Reg, const uint8_t Val){
-	i2c_m_sync_set_slaveaddr(wire, MAG_I2C_ADDR, I2C_M_SEVEN);
-	uint8_t sendvals[2];
-	sendvals[0] = Reg;
-	sendvals[1] = Val;
-	io_write(imu.imu_io, sendvals, 2);
-}
-
- void mag_writeReg2(struct i2c_m_sync_desc *const wire, const uint8_t Reg, const uint8_t first, const uint8_t second){
-	i2c_m_sync_set_slaveaddr(wire, MAG_I2C_ADDR, I2C_M_SEVEN);
-	uint8_t sendvals[3];
-	sendvals[0] = Reg;
-	sendvals[1] = first;
-	sendvals[2] = second;
-	io_write(imu.imu_io, sendvals, 3);
-}
-
- void imu_init(struct i2c_m_sync_desc *const wire){
-	i2c_m_sync_get_io_descriptor(wire, &imu.imu_io);
-	i2c_m_sync_enable(wire);
-}
-
- void acc_clearREADYbit()
+bool acc_config(const ACC_FS_t RANGE, const ACC_BDU_t BLOCK_UPDATE, const ACC_AXIS_EN_t AXIS, const ACC_ODR_t RATE, const ACC_INCREMENT_t INCREMENT)
 {
-	acc_readReg1(&wire,ACC_OUT_X_L);
-	acc_readReg1(&wire,ACC_OUT_X_H);
-	acc_readReg1(&wire,ACC_OUT_Y_L);
-	acc_readReg1(&wire,ACC_OUT_Y_H);
-	acc_readReg1(&wire,ACC_OUT_Z_L);
-	acc_readReg1(&wire,ACC_OUT_Z_H);
+	/* Basic Read-modify-write operation to leave other values unchanged */
+//	volatile uint8_t reg1 = readReg(LSM303_ACCEL, ACC_CTRL1);
+//	volatile uint8_t reg4 = readReg(LSM303_ACCEL, ACC_CTRL4);
+	
+//	reg1 |= (BLOCK_UPDATE | AXIS | RATE);
+//	reg4 |= (RANGE | INCREMENT);
+	
+	writeReg(LSM303_ACCEL, ACC_CTRL1, (0x2F));
+	writeReg(LSM303_ACCEL, ACC_CTRL1, (0x2F));
+	writeReg(LSM303_ACCEL, ACC_CTRL4, (0x04));
+	writeReg(LSM303_ACCEL, ACC_CTRL5, (0x00));
+	
+	volatile uint8_t reg1 = readReg(LSM303_ACCEL, ACC_CTRL1);
+	volatile uint8_t reg4 = readReg(LSM303_ACCEL, ACC_CTRL4);
+	volatile uint8_t reg5 = readReg(LSM303_ACCEL, ACC_CTRL5);
+	
+	return true;
 }
 
- void acc_readXYZ(int* X, int* Y, int* Z)
+bool imu_init(struct i2c_m_sync_desc *const WIRE)
+{
+	lsm303c_sync  = *WIRE;
+	i2c_m_sync_enable(&lsm303c_sync);
+	writeReg(LSM303_ACCEL, ACC_CTRL1, 0x2F);
+	volatile uint8_t reg1 = readReg(LSM303_ACCEL, ACC_CTRL1);
+	return true;
+}
+
+ AxesRaw_t acc_readXYZ()
 {
 	uint8_t valX[2];
 	uint8_t valY[2];
 	uint8_t valZ[2];
+	AxesRaw_t Axes;
 	
-	valX[0] = acc_readReg1(&wire,ACC_OUT_X_L);
-	valX[1] = acc_readReg1(&wire,ACC_OUT_X_H);
-	*X = (valX[0] | (valX[1]<<8));
-	if(*X >=32768)
-	{
-		*X -= 65536;
-	}
+	valX[0] = readReg(LSM303_ACCEL, ACC_OUT_X_L);
+	valX[1] = readReg(LSM303_ACCEL, ACC_OUT_X_H);
+	Axes.xAxis = (int16_t)(valX[0] | (valX[1]<<8));
 	
-	valY[0] = acc_readReg1(&wire,ACC_OUT_Y_L);
-	valY[1] = acc_readReg1(&wire,ACC_OUT_Y_H);
-	*Y = (valY[0] | (valY[1]<<8));
-	if(*Y >=32768)
-	{
-		*Y -= 65536;
-	}
+	valY[0] = readReg(LSM303_ACCEL, ACC_OUT_Y_L);
+	valY[1] = readReg(LSM303_ACCEL, ACC_OUT_Y_H);
+	Axes.yAxis = (int16_t)(valY[0] | (valY[1]<<8));
 	
-	valZ[0] = acc_readReg1(&wire,ACC_OUT_Z_L);
-	valZ[1] = acc_readReg1(&wire,ACC_OUT_Z_H);
-	*Z = (valZ[0] | (valZ[1]<<8));
-	if(*Z >=32768)
-	{
-		*Z -= 65536;
-	}
+	valZ[0] =readReg(LSM303_ACCEL, ACC_OUT_Z_L);
+	valZ[1] = readReg(LSM303_ACCEL,ACC_OUT_Z_H);
+	Axes.zAxis = (int16_t)(valZ[0] | (valZ[1]<<8));
+	
+	return Axes;
 }
 
- void mag_clearREADYbit()
+ACC_STATUS_FLAGS_t acc_getStatus()
 {
-	mag_readReg1(&wire,MAG_OUTX_L);
-	mag_readReg1(&wire,MAG_OUTX_H);
-	mag_readReg1(&wire,MAG_OUTY_L);
-	mag_readReg1(&wire,MAG_OUTY_H);
-	mag_readReg1(&wire,MAG_OUTZ_L);
-	mag_readReg1(&wire,MAG_OUTZ_H);
-}
-
- void mag_readXYZ(int* X, int* Y, int* Z)
-{
-	uint8_t valX[2];
-	uint8_t valY[2];
-	uint8_t valZ[2];
-	
-	valX[0] = mag_readReg1(&wire,MAG_OUTX_L);
-	valX[1] = mag_readReg1(&wire,MAG_OUTX_H);
-	*X = (valX[0] | (valX[1]<<8));
-	if(*X >=32768)
-	{
-		*X -= 65536;
-	}
-	
-	valY[0] = mag_readReg1(&wire,MAG_OUTY_L);
-	valY[1] = mag_readReg1(&wire,MAG_OUTY_H);
-	*Y = (valY[0] | (valY[1]<<8));
-	if(*Y >=32768)
-	{
-		*Y -= 65536;
-	}
-	
-	valZ[0] = mag_readReg1(&wire,MAG_OUTZ_L);
-	valZ[1] = mag_readReg1(&wire,MAG_OUTZ_H);
-	*Z = (valZ[0] | (valZ[1]<<8));
-	if(*Z >=32768)
-	{
-		*Z -= 65536;
-	}
+	return readReg(LSM303_ACCEL, ACC_STATUS);
 }

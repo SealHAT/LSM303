@@ -5,11 +5,12 @@
 
 #define STRING_SIZE (64)
 const uint8_t ReadybitMASK = 0b00001000;
-/*
+
 void makeFloat(const float VAL, const int PRECISION, int* whole, int* dec) {
 	*whole = (int)VAL;
 	*dec   = (VAL * 100) - (*whole * 100);
-}*/
+	
+}
 
 int main(void)
 {
@@ -17,48 +18,46 @@ int main(void)
 	char  output[STRING_SIZE];
 	float x, y, z;
 	
-	uint8_t Status = 0b00000000;
+	ACC_STATUS_FLAGS_t Status;
 	int OUTX_NOST, OUTY_NOST, OUTZ_NOST;
 	
 	atmel_start_init();
 	imu_init(&wire);
 	
-	acc_writeReg1(&wire,ACC_CTRL1, 0x2F); //Initialize sensor, turn on sensor
-	acc_writeReg1(&wire,ACC_CTRL4, 0x04); //FS = 2g
-	acc_writeReg1(&wire,ACC_CTRL5, 0x00); //Disable acc self-test
-	delay_ms(200);
+	while(1){}
+	
+	/*acc_config(ACC_FS_2g,ACC_BDU_ENABLE, ACC_ENABLE_ALL, ACC_ODR_50_Hz, ACC_INCREMENT);
 	
 	do{
-		acc_clearREADYbit();
-		Status = acc_readReg1(&wire,ACC_STATUS);
+//		acc_readXYZ();
+		Status = acc_getStatus();
 		gpio_toggle_pin_level(LED_BUILTIN);
-		delay_ms(10);
-	}while((Status&ReadybitMASK) == 0);
+		delay_ms(100);
+	} while(Status != ACC_ZYX_NEW_DATA_AVAILABLE);
 	
 	while((Status&ReadybitMASK) != 0)
 	{
 		acc_readXYZ(&OUTX_NOST,&OUTY_NOST,&OUTZ_NOST);
 		gpio_set_pin_level(LED_BUILTIN,true);
-	
-	
-			x = (float)(OUTX_NOST*0.061/1000);
-			y = (float)(OUTY_NOST*0.061/1000);
-			z = (float)(OUTZ_NOST*0.061/1000);
-			/* Turn on LED if the DTR signal is set (serial terminal open on host) */
-			gpio_set_pin_level(LED_BUILTIN, usb_dtr());
-			//		lux = max44009_read_uint16();
-			sprintf(output, "3X Accelerations are:\n x is: %d g.\n y is: %d g.\n z is: %d g.\n", (int)x, (int)y, (int)z);
+		
+		//x = (float)(OUTX_NOST*0.061/1000);
+		//y = (float)(OUTY_NOST*0.061/1000);
+		//z = (float)(OUTZ_NOST*0.061/1000);
+		/* Turn on LED if the DTR signal is set (serial terminal open on host) */
+		/*gpio_set_pin_level(LED_BUILTIN, usb_dtr());
+		//		lux = max44009_read_uint16();
+		sprintf(output, "3X Accelerations are:\n x is: %d g.\n y is: %d g.\n z is: %d g.\n", (int)x, (int)y, (int)z);
 			
-			if(usb_dtr()) {
-				char* c = output;
-				while(*c != '\0') {
-					usb_put(*c);
-					c++;
-				}
-				usb_flush();
+		if(usb_dtr()) {
+			char* c = output;
+			while(*c != '\0') {
+				usb_put(*c);
+				c++;
 			}
-			delay_ms(400);
+			usb_flush();
 		}
+		delay_ms(400);
+	}*/
 	
 	
 }

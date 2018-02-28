@@ -16,32 +16,22 @@
 #include <stdlib.h>
 #include "LSM303CTypes.h"
 
- uint8_t acc_readReg1(struct i2c_m_sync_desc *const wire, const uint8_t Reg);
+typedef struct {
+	int16_t xAxis;
+	int16_t yAxis;
+	int16_t zAxis;
+} AxesRaw_t;
 
- void acc_readReg2(struct i2c_m_sync_desc *const wire, const uint8_t Reg, uint8_t* const first, uint8_t* const second);
+ uint8_t readReg(const LSM303_DEV_ADDR_t SLAVE_ADDRESS, const uint8_t REG);
 
- uint8_t mag_readReg1(struct i2c_m_sync_desc *const wire, const uint8_t Reg);
+ void writeReg(const LSM303_DEV_ADDR_t SLAVE_ADDRESS, const uint8_t Reg, uint8_t val);
 
- void mag_readReg2(struct i2c_m_sync_desc *const wire, const uint8_t Reg, uint8_t* const first, uint8_t* const second);
+bool acc_config(const ACC_FS_t RANGE, const ACC_BDU_t BLOCK_UPDATE, const ACC_AXIS_EN_t AXIS, const ACC_ODR_t RATE, const ACC_INCREMENT_t INCREMENT);
 
- void acc_writeReg1(struct i2c_m_sync_desc *const wire, const uint8_t Reg, const uint8_t Val);
+bool imu_init(struct i2c_m_sync_desc *const WIRE);
 
- void acc_writeReg2(struct i2c_m_sync_desc *const wire, const uint8_t Reg, const uint8_t first, const uint8_t second);
+AxesRaw_t acc_readXYZ();
 
- void mag_writeReg1(struct i2c_m_sync_desc *const wire, const uint8_t Reg, const uint8_t Val);
-
- void mag_writeReg2(struct i2c_m_sync_desc *const wire, const uint8_t Reg, const uint8_t first, const uint8_t second);
-
- void imu_init(struct i2c_m_sync_desc *const wire);
-
- void acc_clearREADYbit();
-
- void acc_readXYZ(int* X, int* Y, int* Z);
- void mag_readXYZ(int* X, int* Y, int* Z);
-//int32_t acc_SelfTest();
-
- void mag_clearREADYbit();
-
- void mag_readXYZ(int* X, int* Y, int* Z);
+ACC_STATUS_FLAGS_t acc_getStatus();
 
 #endif /* LSM303_H_ */
