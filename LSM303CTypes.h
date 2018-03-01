@@ -183,14 +183,22 @@ typedef enum {
 typedef enum {
 	ACC_CTRL5_DEBUG			= 0x80,
 	ACC_CTRL5_SOFT_RST		= 0x40,
-	ACC_CTRL5_DEC2			= 0x10,
-	ACC_CTRL5_DEC4			= 0x20,
-	ACC_CTRL5_DEC8			= 0x30,
-	ACC_CTRL5_ST_POS		= 0x04,
-	ACC_CTRL5_ST_NEG		= 0x08,
 	ACC_CTRL5_ISR_ALOW		= 0x02,
 	ACC_CTRL5_ISR_ODRAIN	= 0x01
 } ACC_CTRL_REG5_t;
+
+typedef enum {
+	ACC_NO_DECIMATION		= 0x00,
+	ACC_DECIMATION_2		= 0x10,
+	ACC_DECIMATION_4		= 0x20,
+	ACC_DECIMATION_8		= 0x30
+} ACC_DECIMATION_t;
+
+typedef enum {
+	ACC_SELF_TEST_OFF		= 0x00,
+	ACC_SELF_TEST_POS		= 0x04,
+	ACC_SELF_TEST_NEG		= 0x08
+} ACC_SELF_TEST_t;
 
 /*****************************************/
 /*** ACCELEROMETER CONTROL REGISTER #6 ***/

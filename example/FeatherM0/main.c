@@ -4,62 +4,43 @@
 #include "usb_start.h"
 
 #define STRING_SIZE (64)
-const uint8_t ReadybitMASK = 0b00001000;
 
-void makeFloat(const float VAL, const int PRECISION, int* whole, int* dec) {
-	*whole = (int)VAL;
-	*dec   = (VAL * 100) - (*whole * 100);
-	
+int decPart(const float VAL) {
+	int retval = (VAL * 100) - ((int)VAL * 100);
+	return (retval > 0 ? retval : retval * -1);
 }
 
 int main(void)
 {
 	
-	char  output[STRING_SIZE];
-	float x, y, z;
-	
-	ACC_STATUS_FLAGS_t Status;
-	int OUTX_NOST, OUTY_NOST, OUTZ_NOST;
+	char  output[STRING_SIZE];		/* A string used for output on USB */
+	AxesRaw_t xcel;					/* Accelerometer reading */
+	float x,y,z;					/* Float axis for string output */
 	
 	atmel_start_init();
-	imu_init(&wire);
+	imu_init(&wire);	
+	acc_config(ACC_FS_2g,ACC_BDU_ENABLE, ACC_ENABLE_ALL, ACC_ODR_50_Hz, ACC_INCREMENT);
 	
-	while(1){}
-	
-	/*acc_config(ACC_FS_2g,ACC_BDU_ENABLE, ACC_ENABLE_ALL, ACC_ODR_50_Hz, ACC_INCREMENT);
-	
-	do{
-//		acc_readXYZ();
-		Status = acc_getStatus();
-		gpio_toggle_pin_level(LED_BUILTIN);
-		delay_ms(100);
-	} while(Status != ACC_ZYX_NEW_DATA_AVAILABLE);
-	
-	while((Status&ReadybitMASK) != 0)
-	{
-		acc_readXYZ(&OUTX_NOST,&OUTY_NOST,&OUTZ_NOST);
-		gpio_set_pin_level(LED_BUILTIN,true);
-		
-		//x = (float)(OUTX_NOST*0.061/1000);
-		//y = (float)(OUTY_NOST*0.061/1000);
-		//z = (float)(OUTZ_NOST*0.061/1000);
+	for(;;) {
 		/* Turn on LED if the DTR signal is set (serial terminal open on host) */
-		/*gpio_set_pin_level(LED_BUILTIN, usb_dtr());
-		//		lux = max44009_read_uint16();
-		sprintf(output, "3X Accelerations are:\n x is: %d g.\n y is: %d g.\n z is: %d g.\n", (int)x, (int)y, (int)z);
+		gpio_set_pin_level(LED_BUILTIN, usb_dtr());
+
+		/* Read the light sensor as both a exponent/mantissa and as an integer LUX value */
+		if(acc_getStatus() != ACC_NULL_STATUS) {
+			xcel  = acc_readXYZ();
 			
-		if(usb_dtr()) {
-			char* c = output;
-			while(*c != '\0') {
-				usb_put(*c);
-				c++;
+			x = (float)(xcel.xAxis*0.061/1000);
+			y = (float)(xcel.yAxis*0.061/1000);
+			z = (float)(xcel.zAxis*0.061/1000);
+		
+			/* Format as a string and output to USB Serial */
+			sprintf(output, "ACCEL: x=%d.%dg   y=%d.%dg   z=%d.%dg\n", (int)x, decPart(x), (int)y, decPart(y), (int)z, decPart(z));
+			
+			if(usb_dtr()) {
+				usb_send_buffer((uint8_t*)output, strlen(output));
 			}
-			usb_flush();
 		}
-		delay_ms(400);
-	}*/
-	
-	
+	}
 }
 
 /*
