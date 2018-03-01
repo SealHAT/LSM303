@@ -19,9 +19,22 @@ static struct i2c_m_sync_desc lsm303c_sync; /* Structure for IMU communications 
 }
 
 /* Read a single register*/
- void writeReg(const LSM303_DEV_ADDR_t SLAVE_ADDRESS, const uint8_t Reg, uint8_t val){
-	i2c_m_sync_set_slaveaddr(&lsm303c_sync, SLAVE_ADDRESS, I2C_M_SEVEN);
-	i2c_m_sync_cmd_write(&lsm303c_sync, Reg, &val, 1);
+ void writeReg(const LSM303_DEV_ADDR_t SLAVE_ADDRESS, const uint8_t Reg, uint8_t val)
+ {
+	struct _i2c_m_msg msg;
+	uint8_t buff[2];
+	buff[0] = Reg;
+	buff[1] = val;
+	
+	msg.addr   = SLAVE_ADDRESS;
+	msg.len    = 2;
+	msg.flags  = I2C_M_STOP;
+	msg.buffer = buff;
+	
+	_i2c_m_sync_transfer(&lsm303c_sync.device, &msg);
+	
+//	i2c_m_sync_set_slaveaddr(&lsm303c_sync, SLAVE_ADDRESS, I2C_M_SEVEN);
+//	i2c_m_sync_cmd_write(&lsm303c_sync, Reg, &val, 1);
 }
 
 bool acc_config(const ACC_FS_t RANGE, const ACC_BDU_t BLOCK_UPDATE, const ACC_AXIS_EN_t AXIS, const ACC_ODR_t RATE, const ACC_INCREMENT_t INCREMENT)
