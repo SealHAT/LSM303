@@ -7,6 +7,8 @@
 #include "LSM303.h"
 #include "math.h"
 
+#define CONTINOUS_READ_LENTH		(12)
+
 static struct i2c_m_sync_desc lsm303c_sync; /* Structure for IMU communications */
 
 /* Read a single register for accelerometer*/
@@ -14,28 +16,6 @@ static struct i2c_m_sync_desc lsm303c_sync; /* Structure for IMU communications 
 	uint8_t retval;
 	i2c_m_sync_set_slaveaddr(&lsm303c_sync, SLAVE_ADDRESS, I2C_M_SEVEN);
 	i2c_m_sync_cmd_read(&lsm303c_sync, REG, &retval, 1);
-	return retval;
-}
-
-static uint32_t readContinous(const LSM303_DEV_ADDR_t SLAVE_ADDRESS, const uint8_t STARTING_REG, uint8_t* buf, const uint32_t LEN)
-{
-	uint32_t retval = I2C_ERR_BAD_ADDRESS;
-	
-	if(LEN < 12) {
-		struct _i2c_m_msg msg;
-		uint8_t tempBuf[12];
-		tempBuf[0] = STARTING_REG;
-	
-		msg.addr   = SLAVE_ADDRESS;
-		msg.len    = LEN;
-		msg.flags  = I2C_M_STOP;
-		msg.buffer = tempBuf;
-		
-		retval = _i2c_m_sync_transfer(&lsm303c_sync.device, &msg);
-		
-		memcpy(buf, tempBuf+1, LEN);
-	}
-
 	return retval;
 }
 
@@ -66,6 +46,35 @@ static uint32_t readContinous(const LSM303_DEV_ADDR_t SLAVE_ADDRESS, const uint8
 	msg.buffer = buff;
 	
 	return _i2c_m_sync_transfer(&lsm303c_sync.device, &msg);
+}
+
+static uint32_t readContinous(const LSM303_DEV_ADDR_t SLAVE_ADDRESS, const uint8_t STARTING_REG, uint8_t* buf, const uint32_t LEN)
+{
+	uint32_t retval = I2C_ERR_BAD_ADDRESS;
+	
+	if(LEN <= CONTINOUS_READ_LENTH) {
+		struct _i2c_m_msg msg;
+		uint8_t tempBuf[CONTINOUS_READ_LENTH];
+		tempBuf[0] = STARTING_REG;
+	
+		msg.addr   = SLAVE_ADDRESS;
+		msg.len    = 1;
+		msg.flags  = 0;
+		msg.buffer = tempBuf;
+	
+		retval = _i2c_m_sync_transfer(&lsm303c_sync.device, &msg);
+	
+		msg.addr   = SLAVE_ADDRESS;
+		msg.len    = LEN;
+		msg.flags  = I2C_M_RD | I2C_M_STOP;
+		msg.buffer = tempBuf;
+		
+		retval = _i2c_m_sync_transfer(&lsm303c_sync.device, &msg);
+		
+		memcpy(buf, tempBuf, LEN);
+	}
+
+	return retval;
 }
 
 bool acc_config(const ACC_FS_t RANGE, const ACC_BDU_t BLOCK_UPDATE, const ACC_AXIS_EN_t AXIS, const ACC_ODR_t RATE, const ACC_INCREMENT_t INCREMENT)

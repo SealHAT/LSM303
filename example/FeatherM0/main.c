@@ -19,7 +19,7 @@ int main(void)
 	
 	atmel_start_init();
 	imu_init(&wire);	
-	acc_config(ACC_FS_2g,ACC_BDU_ENABLE, ACC_ENABLE_ALL, ACC_ODR_50_Hz, ACC_INCREMENT);
+	acc_config(ACC_FS_2g, ACC_BDU_ENABLE, ACC_ENABLE_ALL, ACC_ODR_50_Hz, ACC_INCREMENT);
 	
 	for(;;) {
 		/* Turn on LED if the DTR signal is set (serial terminal open on host) */
@@ -27,7 +27,7 @@ int main(void)
 
 		/* Read the light sensor as both a exponent/mantissa and as an integer LUX value */
 		if(acc_getStatus() != ACC_NULL_STATUS) {
-			xcel  = acc_readXYZ();
+			xcel  = acc_readContinous();
 			
 			x = (float)(xcel.xAxis*0.061/1000);
 			y = (float)(xcel.yAxis*0.061/1000);
