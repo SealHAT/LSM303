@@ -102,29 +102,7 @@ bool imu_init(struct i2c_m_sync_desc *const WIRE)
 	return true;
 }
 
-AxesRaw_t acc_readXYZ()
-{
-	uint8_t valX[2];
-	uint8_t valY[2];
-	uint8_t valZ[2];
-	AxesRaw_t Axes;
-	
-	valX[0] = readReg(LSM303_ACCEL, ACC_OUT_X_L);
-	valX[1] = readReg(LSM303_ACCEL, ACC_OUT_X_H);
-	Axes.xAxis = (int16_t)(valX[0] | (valX[1]<<8));
-	
-	valY[0] = readReg(LSM303_ACCEL, ACC_OUT_Y_L);
-	valY[1] = readReg(LSM303_ACCEL, ACC_OUT_Y_H);
-	Axes.yAxis = (int16_t)(valY[0] | (valY[1]<<8));
-	
-	valZ[0] =readReg(LSM303_ACCEL, ACC_OUT_Z_L);
-	valZ[1] = readReg(LSM303_ACCEL,ACC_OUT_Z_H);
-	Axes.zAxis = (int16_t)(valZ[0] | (valZ[1]<<8));
-	
-	return Axes;
-}
-
-AxesRaw_t acc_readContinous()
+AxesRaw_t acc_read()
 {
 	AxesRaw_t Axes;
 	readContinous(LSM303_ACCEL, ACC_OUT_X_L, (uint8_t*)&Axes, 6);

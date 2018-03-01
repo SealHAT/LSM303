@@ -27,7 +27,7 @@ int main(void)
 
 		/* Read the light sensor as both a exponent/mantissa and as an integer LUX value */
 		if(acc_getStatus() != ACC_NULL_STATUS) {
-			xcel  = acc_readContinous();
+			xcel  = acc_read();
 			
 			x = (float)(xcel.xAxis*0.061/1000);
 			y = (float)(xcel.yAxis*0.061/1000);
