@@ -119,27 +119,50 @@ typedef enum {
 /*** ACCELEROMETER CONTROL REGISTER #2 ***/
 /*****************************************/
 typedef enum {
-	ACC_CTRL2_DFC			= 0x60,
-	ACC_CTRL2_HIGHPASS_NORM	= 0x00,
-	ACC_CTRL2_HIGHPASS_REF	= 0x18,
-	ACC_CTRL2_FDS_INTERNAL	= 0x00,
-	ACC_CTRL2_FDS_OUTPUT	= 0x04,
-	ACC_CTRL2_HPIS			= 0x03
-} ACC_CTRL_REG2_t;
+	ACC_HIGHPASS_ODR_50		= 0x00,
+	ACC_HIGHPASS_ODR_100	= 0x20,
+	ACC_HIGHPASS_ODR_9		= 0x40,
+	ACC_HIGHPASS_ODR_400	= 0x60
+} ACC_HIGHPASS_SELECT_t;
+
+typedef enum {
+	ACC_HIGHPASS_NORMAL		= 0x00,	/* also valid with 0x10 */
+	ACC_HIGHPASS_REFERENCE	= 0x08
+} ACC_HIGHPASS_MODE_t;
+
+typedef enum {
+	ACC_FDS_INTERNAL_BYPASS	= 0x00,
+	ACC_FDS_OUTPUT_REGISTER	= 0x04
+} ACC_HIGHPASS_DATA_t;
+
+typedef enum {
+	ACC_ISR1_HP_BYPASS	= 0x00,
+	ACC_ISR1_HP_ENABLE	= 0x01,
+	ACC_ISR2_HP_BYPASS	= 0x00,
+	ACC_ISR2_HP_ENABLE	= 0x02
+} ACC_HIGHPASS_ISR_t;
 
 /*****************************************/
 /*** ACCELEROMETER CONTROL REGISTER #3 ***/
 /*****************************************/
 typedef enum {
-	ACC_CTRL3_FIFO_EN		= 0x80,
-	ACC_CTRL3_STOP_FTH		= 0x40,
-	ACC_CTRL3_INT_INTAC		= 0x20,
-	ACC_CTRL3_INT_IG2		= 0x10,
-	ACC_CTRL3_INT_IG1		= 0x08,
-	ACC_CTRL3_INT_XL_OVR	= 0x04,
-	ACC_CTRL3_INT_XL_FTH	= 0x02,
-	ACC_CTRL3_INT_XL_DRDY	= 0x01
-} ACC_CTRL_REG3_t;
+	ACC_FIFO_OFF			= 0x00,
+	ACC_FIFO_ON				= 0x80
+} ACC_FIFO_ENABLE_t;
+
+typedef enum {
+	ACC_FIFO_THRESHOLD_OFF	= 0x00,
+	ACC_FIFO_THRESHOLD_ON	= 0x40
+} ACC_FIFO_THRESHOLD_t;
+
+typedef enum {
+	ACC_ISR_INACTIVITYT		= 0x20,
+	ACC_ISR_GENERATOR2		= 0x10,
+	ACC_ISR_GENERATOR1		= 0x08,
+	ACC_ISR_FIFO_OVERRUN	= 0x04,
+	ACC_ISR_FIFO_THRESHOLD	= 0x02,
+	ACC_ISR_DATA_READY		= 0x01
+} ACC_ISR_ENABLE_t;
 
 /*****************************************/
 /*** ACCELEROMETER CONTROL REGISTER #4 ***/
@@ -181,11 +204,14 @@ typedef enum {
 /*** ACCELEROMETER CONTROL REGISTER #5 ***/
 /*****************************************/
 typedef enum {
-	ACC_CTRL5_DEBUG			= 0x80,
-	ACC_CTRL5_SOFT_RST		= 0x40,
-	ACC_CTRL5_ISR_ALOW		= 0x02,
-	ACC_CTRL5_ISR_ODRAIN	= 0x01
-} ACC_CTRL_REG5_t;
+	ACC_DEBUG_ON			= 0x80,
+	ACC_DEBUG_OFF			= 0x00
+} ACC_ENABLE_DEBUG_t;
+
+typedef enum {
+	ACC_SOFT_RESET			= 0x40,
+	ACC_NO_RESET			= 0x00
+} ACC_SOFT_RESET_t;
 
 typedef enum {
 	ACC_NO_DECIMATION		= 0x00,
@@ -200,24 +226,47 @@ typedef enum {
 	ACC_SELF_TEST_NEG		= 0x08
 } ACC_SELF_TEST_t;
 
+typedef enum {
+	ACC_ISR_ACTIVE_HI		= 0x00,
+	ACC_ISR_ACTIVE_LOW		= 0x02
+} ACC_ISR_LEVEL_t;
+
+typedef enum {
+	ACC_ISR_PUSHPULL		= 0x00,
+	ACC_ISR_OPENDRAIN		= 0x01
+} ACC_ISR_OUTPUT_MODE_t;
+
 /*****************************************/
 /*** ACCELEROMETER CONTROL REGISTER #6 ***/
 /*****************************************/
 typedef enum {
-	ACC_CTRL6_FORCE_REBOOT	= 0x80
-} ACC_CTRL_REG6_t;
+	ACC_FORCE_REBOOT	= 0x80,
+	ACC_NO_REBOOT		= 0x00
+} ACC_FORCE_REBOOT_t;
 
 /*****************************************/
 /*** ACCELEROMETER CONTROL REGISTER #7 ***/
 /*****************************************/
 typedef enum {
-	ACC_CTRL7_DCRM2			= 0x20,
-	ACC_CTRL7_DCRM1			= 0x10,
-	ACC_CTRL7_LIR2			= 0x08,
-	ACC_CTRL7_LIR1			= 0x04,
-	ACC_CTRL7_4D_IG1		= 0x02,
-	ACC_CTRL7_4D_IG2		= 0x01
-} ACC_CTRL_REG7_t;
+	ACC_DCRM1_OFF			= 0x00,
+	ACC_DCRM1_ON			= 0x10,
+	ACC_DCRM2_OFF			= 0x00,
+	ACC_DCRM2_ON			= 0x20
+} ACC_COUNT_RESET_MODE_t;
+
+typedef enum {
+	ACC_ISR1_LATCH_OFF	= 0x00,
+	ACC_ISR1_LATCH_ON	= 0x04,
+	ACC_ISR2_LATCH_OFF	= 0x00,
+	ACC_ISR2_LATCH_ON	= 0x08
+} ACC_ISR_LATCH_t;
+
+typedef enum {
+	ACC_ISR1_4D_OFF		= 0x00,
+	ACC_ISR1_4D_ON		= 0x02,
+	ACC_ISR2_4D_OFF		= 0x00,
+	ACC_ISR2_4D_ON		= 0x01
+} ACC_ISR_4D_t;
 
 /*****************************************/
 /*** ACCELEROMETER STATUS REGISTER     ***/
@@ -413,15 +462,28 @@ typedef enum {
 /*****************************************/
 /***   MAGNETOMETER INTERRUPT CONFIG   ***/
 /*****************************************/
+#define MAG_ISRCONFIG_MUSTSET		(0x08)
+
 typedef enum {
-	MAG_INTCFG_XEN			= 0x80,
-	MAG_INTCFG_YEN			= 0x40,
-	MAG_INTCFG_ZEN			= 0x20,
-	MAG_INTCFG_MUSTSET		= 0x08,
-	MAG_INTCFG_IEA			= 0x04,
-	MAG_INTCFG_IEL			= 0x02,
-	MAG_INTCFG_IEN			= 0x01
+	MAG_INTCFG_XEN			= (0x80 | MAG_ISRCONFIG_MUSTSET),
+	MAG_INTCFG_YEN			= (0x40 | MAG_ISRCONFIG_MUSTSET),
+	MAG_INTCFG_ZEN			= (0x20 | MAG_ISRCONFIG_MUSTSET)
 } MAG_INT_CFG_t;
+
+typedef enum {
+	MAG_ISR_ACTIVE_LO		= (0x00 | MAG_ISRCONFIG_MUSTSET),
+	MAG_ISR_ACTIVE_HI		= (0x04 | MAG_ISRCONFIG_MUSTSET)
+} MAG_ISR_LEVEL_t;
+
+typedef enum {
+	MAG_ISR2_LATCH_ON		= (0x00 | MAG_ISRCONFIG_MUSTSET),
+	MAG_ISR2_LATCH_OFF		= (0x02 | MAG_ISRCONFIG_MUSTSET)
+} MAG_ISR_LATCH_t;
+
+typedef enum {
+	MAG_ISR_DISABLE			= (0x00 | MAG_ISRCONFIG_MUSTSET),
+	MAG_ISR_ENABLE			= (0x01 | MAG_ISRCONFIG_MUSTSET)
+} MAG_ISR_ENABLE_t;
 
 /*****************************************/
 /***   MAGNETOMETER INTERRUPT SOURCE   ***/
