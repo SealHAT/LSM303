@@ -281,7 +281,7 @@ typedef enum {
 	ACC_Y_OVERRUN               = 0x20,
 	ACC_Z_OVERRUN               = 0x40,
 	ACC_ZYX_OVERRUN             = 0x80
-} ACC_STATUS_FLAGS_t;
+} ACC_STATUS_t;
 
 typedef enum {
 	ACC_FIFOCTRL_BYPASS			= 0x00,
@@ -444,6 +444,7 @@ typedef enum {
 /***   MAGNETOMETER STATUS REGISTER    ***/
 /*****************************************/
 typedef enum {
+	MAG_NULL_STATUS			= 0x00,
 	MAG_STATUS_ZYXOR		= 0x80,
 	MAG_STATUS_ZOR			= 0x40,
 	MAG_STATUS_YOR			= 0x20,
