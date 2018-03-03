@@ -124,6 +124,39 @@ void usb_put(uint8_t outChar)
 	}
 }
 
+/***************************************************************************
+ * FUNCTION: usb_send_buffer()
+ * -------------------------------------------------------------------------
+ * Send a buffer of data over USB. The data buffer can be of any length.
+ * If user's output buffer size is larger than USB buffer, only the max USB
+ * buffer size amount of data will be written into the buffer, flushed, then
+ * the user's buffer data will begin filling the USB out buffer again.
+ * 
+ * INPUTS:
+ *      outData         :   buffer of data to output over USB
+ *      BUFFER_SIZE     :   size of buffer to transfer
+ *
+ * OUTPUTS:
+ *      void
+ ***************************************************************************/
+// TODO - make non-blocking
+void usb_send_buffer(uint8_t outData[], int BUFFER_SIZE)
+{
+    int i = 0;  // Output data buffer index
+    
+    while(i < BUFFER_SIZE)
+    {
+        while((i < BUFFER_SIZE) && (tx_idx != USB_BUFFER_SIZE))
+        {
+            usb_put(outData[i]);
+            i++;
+        }
+
+		usb_flush();
+    }        
+    
+}
+
 // TODO make this non-blocking
 int usb_get(void)
 {
@@ -139,6 +172,61 @@ int usb_get(void)
 	retval = cdcdf_acm_read(&inChar, 1);
 	while(outComplete == 0); // block until data read
 	return (retval < 0 ? retval : inChar);
+}
+
+/***************************************************************************
+ * FUNCTION: usb_receive_buffer()
+ * -------------------------------------------------------------------------
+ * Receive a buffer of data over USB. Input data buffer can be of any size. 
+ * If user's input buffer size is larger than USB buffer, only the max USB
+ * buffer size amount of data will be written into the buffer.
+ * 
+ * INPUTS:
+ *      receiveBuffer   :   buffer to store incoming USB data
+ *      BUFFER_SIZE     :   size of receiving buffer
+ *
+ * OUTPUTS:
+ *      retval          :   returns the number of bytes received
+ ***************************************************************************/
+// TODO - make non-blocking
+int usb_receive_buffer(uint8_t receiveBuffer[], int BUFFER_SIZE)
+{
+    int bufferSize;     //adjusted buffer size
+	int letter;         //value received from USB buffer
+    int i;              //LCV and # of bytes received
+	
+	/* Users input buffer size doesn't matter. If size is bigger, only indices 
+	 * 0 through USB_BUFFER_SIZE - 1 will be filled. If the input array is 
+	 * smaller, only up until BUFFER_SIZE will be filled. */
+	if(BUFFER_SIZE < USB_BUFFER_SIZE)
+	{
+		bufferSize = BUFFER_SIZE;
+	}
+	else
+	{
+		bufferSize = USB_BUFFER_SIZE;
+	}
+	
+	i = 0;
+	
+    /* Get data from USB buffer. Only a maximum of USB_BUFFER_SIZE values will
+     * be read into the buffer. */
+	while(i < bufferSize)
+	{
+        letter = usb_get();
+        
+        if(letter > 0) 
+        {
+            receiveBuffer[i] = letter;
+            i++;
+        }
+    }        
+
+    /* Make sure all data is read before returning */
+	while(outComplete == 0); // block until data read
+    
+	/* If there was an error, return error val. Else, return 0. */
+	return i;
 }
 
 bool usb_configured(void) {

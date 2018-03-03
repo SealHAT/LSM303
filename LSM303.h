@@ -16,32 +16,44 @@
 #include <stdlib.h>
 #include "LSM303CTypes.h"
 
- uint8_t acc_readReg1(struct i2c_m_sync_desc *const wire, const uint8_t Reg);
+typedef struct {
+	int16_t xAxis;
+	int16_t yAxis;
+	int16_t zAxis;
+} AxesRaw_t;
 
- void acc_readReg2(struct i2c_m_sync_desc *const wire, const uint8_t Reg, uint8_t* const first, uint8_t* const second);
+typedef struct {
+	AxesRaw_t acc;
+	AxesRaw_t mag;
+	int16_t temp;
+} ImuReading_t;
 
- uint8_t mag_readReg1(struct i2c_m_sync_desc *const wire, const uint8_t Reg);
+typedef enum {
+	NULL_STATUS				= 0x00,
+	X_NEW_DATA_AVAILABLE    = 0x01,
+	Y_NEW_DATA_AVAILABLE    = 0x02,
+	Z_NEW_DATA_AVAILABLE    = 0x04,
+	ZYX_NEW_DATA_AVAILABLE  = 0x08,
+	X_OVERRUN               = 0x10,
+	Y_OVERRUN               = 0x20,
+	Z_OVERRUN               = 0x40,
+	ZYX_OVERRUN             = 0x80
+} IMU_STATUS_t;
 
- void mag_readReg2(struct i2c_m_sync_desc *const wire, const uint8_t Reg, uint8_t* const first, uint8_t* const second);
+bool imu_init(struct i2c_m_sync_desc *const WIRE);
 
- void acc_writeReg1(struct i2c_m_sync_desc *const wire, const uint8_t Reg, const uint8_t Val);
+bool acc_config(const ACC_FS_t RANGE, const ACC_BDU_t BLOCK_UPDATE, const ACC_AXIS_EN_t AXIS, const ACC_ODR_t RATE, const ACC_INCREMENT_t INCREMENT);
 
- void acc_writeReg2(struct i2c_m_sync_desc *const wire, const uint8_t Reg, const uint8_t first, const uint8_t second);
+IMU_STATUS_t acc_getStatus();
 
- void mag_writeReg1(struct i2c_m_sync_desc *const wire, const uint8_t Reg, const uint8_t Val);
+AxesRaw_t acc_read();
 
- void mag_writeReg2(struct i2c_m_sync_desc *const wire, const uint8_t Reg, const uint8_t first, const uint8_t second);
+bool mag_config();
 
- void imu_init(struct i2c_m_sync_desc *const wire);
+IMU_STATUS_t mag_getStatus();
 
- void acc_clearREADYbit();
+AxesRaw_t mag_read();
 
- void acc_readXYZ(int* X, int* Y, int* Z);
- void mag_readXYZ(int* X, int* Y, int* Z);
-//int32_t acc_SelfTest();
-
- void mag_clearREADYbit();
-
- void mag_readXYZ(int* X, int* Y, int* Z);
+ImuReading_t imu_read();
 
 #endif /* LSM303_H_ */
