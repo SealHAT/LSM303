@@ -23,37 +23,10 @@ typedef struct {
 } AxesRaw_t;
 
 typedef struct {
-	ACC_HR_t         highResMode;	/* CTRL_REG1:  */
-	ACC_ODR_t        sampleRate;	/* CTRL_REG1:  */
-	ACC_BDU_t        BlockUpdate;	/* CTRL_REG1:  */
-	ACC_AXIS_EN_t    enableAxis;	/* CTRL_REG1:  */
-	ACC_CTRL_REG2_t  ctrlReg2;		/* CTRL_REG2:  */
-	ACC_CTRL_REG3_t  ctrlReg3;		/* CTRL_REG3:  */
-	ACC_BW_t		 antiAliasing;	/* CTRL_REG4:  */
-	ACC_FS_t         fullScale;		/* CTRL_REG4:  */
-	ACC_ODR_SCALE_t  odrScaling;	/* CTRL_REG4:  */
-	ACC_INCREMENT_t  autoIncrement;	/* CTRL_REG4:  */
-	ACC_I2C_t        i2cMode;		/* CTRL_REG4:  */
-	ACC_SPI_t        spiMode;		/* CTRL_REG4:  */
-	ACC_CTRL_REG5_t  ctrlReg5;		/* CTRL_REG5:  */
-	ACC_DECIMATION_t decimation;	/* CTRL_REG5:  */
-	ACC_SELF_TEST_t  selfTest;		/* CTRL_REG5:  */
-	ACC_CTRL_REG6_t  forceReboot;	/* CTRL_REG6:  */
-	ACC_CTRL_REG7_t  ctrlReg7;		/* CTRL_REG7:  */
-} AccelConfig_t;
-
-typedef struct {
-	MAG_TEMP_EN_t    highResMode;	/* CTRL_REG1:  */
-	MAG_SELF_TEST_t  selfTest;		/* CTRL_REG1:  */
-	MAG_OMXY_t       xyMode;		/* CTRL_REG1:  */
-	MAG_DO_t         sampleRate;	/* CTRL_REG1:  */
-	MAG_FS_t         fullScale;     /* CTRL_REG2:  */
-	MAG_RESET_t      reboot;		/* CTRL_REG2:  */
-	MAG_LOWPOWER_t   lowpower;		/* CTRL_REG3:  */
-	MAG_I2C_t        i2cMode;		/* CTRL_REG3:  */
-	MAG_SPI_t        spiMode;		/* CTRL_REG3:  */
-	MAG_MD_t         operationMode; /* CTRL_REG3:  */
-} AccelConfig_t;
+	AxesRaw_t acc;
+	AxesRaw_t mag;
+	int16_t temp;
+} ImuReading_t;
 
 bool imu_init(struct i2c_m_sync_desc *const WIRE);
 
