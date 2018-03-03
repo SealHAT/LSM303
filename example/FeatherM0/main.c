@@ -26,7 +26,7 @@ int main(void)
 		gpio_set_pin_level(LED_BUILTIN, usb_dtr());
 
 		/* Read the light sensor as both a exponent/mantissa and as an integer LUX value */
-		if(acc_getStatus() != ACC_NULL_STATUS) {
+		if(acc_getStatus() != NULL_STATUS) {
 			xcel  = acc_read();
 			
 			x = (float)(xcel.xAxis*0.061/1000);

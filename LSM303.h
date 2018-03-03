@@ -48,7 +48,7 @@ IMU_STATUS_t acc_getStatus();
 
 AxesRaw_t acc_read();
 
-bool mag_config();
+bool mag_config(const MAG_TEMP_EN_t TEMP, const MAG_DO_t DO, const MAG_FS_t FS, const MAG_MD_t MD, const MAG_BDU_t BDU);
 
 IMU_STATUS_t mag_getStatus();
 

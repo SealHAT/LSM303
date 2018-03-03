@@ -95,6 +95,26 @@ bool acc_config(const ACC_FS_t RANGE, const ACC_BDU_t BLOCK_UPDATE, const ACC_AX
 	return true;
 }
 
+bool mag_config(const MAG_TEMP_EN_t TEMP, const MAG_DO_t DO, const MAG_FS_t FS, const MAG_MD_t MD, const MAG_BDU_t BDU)
+{
+	/* Basic Read-modify-write operation to leave other values unchanged */
+	volatile uint8_t reg1 = readReg(LSM303_MAG, MAG_CTRL_REG1);
+	volatile uint8_t reg2 = readReg(LSM303_MAG, MAG_CTRL_REG2);
+	volatile uint8_t reg3 = readReg(LSM303_MAG, MAG_CTRL_REG3);
+	volatile uint8_t reg5 = readReg(LSM303_MAG, MAG_CTRL_REG5);
+	
+	reg1 |= (TEMP |DO);
+	reg2 |= (FS);
+	reg3 |= (MD);
+	reg5 |= (BDU);
+	
+	writeReg(LSM303_MAG, MAG_CTRL_REG1, reg1);
+	writeReg(LSM303_MAG, MAG_CTRL_REG2, reg2);
+	writeReg(LSM303_MAG, MAG_CTRL_REG3, reg3);
+	writeReg(LSM303_MAG, MAG_CTRL_REG5, reg5);
+	return true;
+}
+
 bool imu_init(struct i2c_m_sync_desc *const WIRE)
 {
 	lsm303c_sync  = *WIRE;
