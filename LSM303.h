@@ -26,6 +26,8 @@ bool imu_init(struct i2c_m_sync_desc *const WIRE);
 
 bool acc_config(const ACC_FS_t RANGE, const ACC_BDU_t BLOCK_UPDATE, const ACC_AXIS_EN_t AXIS, const ACC_ODR_t RATE, const ACC_INCREMENT_t INCREMENT);
 
+bool acc_config(const ACC_FS_t RANGE, const ACC_BDU_t BLOCK_UPDATE, const ACC_AXIS_EN_t AXIS, const ACC_ODR_t RATE, const ACC_INCREMENT_t INCREMENT);
+
 ACC_STATUS_FLAGS_t acc_getStatus();
 
 AxesRaw_t acc_read();
