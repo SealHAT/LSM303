@@ -341,16 +341,25 @@ typedef enum {
 typedef enum {
 	MAG_CTRL2_REBOOT	= 0x08,
 	MAG_CTRL2_SOFT_RST	= 0x04
-} MAG_CTRL_REG2_t;
+} MAG_RESET_t;
 
 /*****************************************/
 /*** MAGNETOMETER CONTROL REGISTER #3  ***/
 /*****************************************/
 typedef enum {
-	MAG_CTRL_REG3_I2C_OFF	 = 0x80,
-	MAG_CTRL_REG3_LOWPOWER	 = 0x20,
-	MAG_CTRL_REG3_SPI_ON	 = 0x04
-} MAG_CTRL_REG3_t;
+	MAG_LOWPOWER_ON	 = 0x20,
+	MAG_LOWPOWER_OFF = 0x20
+} MAG_LOWPOWER_t;
+
+typedef enum {
+	MAG_I2C_ON		= 0x00,
+	MAG_I2C_OFF		= 0x80
+} MAG_I2C_t;
+
+typedef enum {
+	MAG_SPI_OFF		= 0x00,
+	MAG_SPI_ON		= 0x04
+} MAG_SPI_t;
 
 typedef enum {
 	MAG_MD_CONTINUOUS   = 0x00,

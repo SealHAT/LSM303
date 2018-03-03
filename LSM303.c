@@ -80,9 +80,9 @@ static uint32_t readContinous(const LSM303_DEV_ADDR_t SLAVE_ADDRESS, const uint8
 bool acc_config(const ACC_FS_t RANGE, const ACC_BDU_t BLOCK_UPDATE, const ACC_AXIS_EN_t AXIS, const ACC_ODR_t RATE, const ACC_INCREMENT_t INCREMENT)
 {
 	/* Basic Read-modify-write operation to leave other values unchanged */
-	volatile uint8_t reg1 = readReg(LSM303_ACCEL, ACC_CTRL1);
-	volatile uint8_t reg4 = readReg(LSM303_ACCEL, ACC_CTRL4);
-	volatile uint8_t reg5 = readReg(LSM303_ACCEL, ACC_CTRL5);
+	uint8_t reg1 = readReg(LSM303_ACCEL, ACC_CTRL1);
+	uint8_t reg4 = readReg(LSM303_ACCEL, ACC_CTRL4);
+	uint8_t reg5 = readReg(LSM303_ACCEL, ACC_CTRL5);
 	
 	reg1 |= (BLOCK_UPDATE | AXIS | RATE);
 	reg4 |= (RANGE | INCREMENT);
@@ -112,4 +112,11 @@ AxesRaw_t acc_read()
 ACC_STATUS_FLAGS_t acc_getStatus()
 {
 	return readReg(LSM303_ACCEL, ACC_STATUS);
+}
+
+AxesRaw_t mag_read()
+{
+	AxesRaw_t Axes;
+	readContinous(LSM303_ACCEL, MAG_OUTX_L, (uint8_t*)&Axes, 6);
+	return Axes;
 }
