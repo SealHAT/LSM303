@@ -176,7 +176,7 @@ int16_t lsm303_readTemp()
 	return temperature;
 }
 
-float lsm303_getGravity(const int16_t axis)
+float lsm303_getGravity(const int16_t AXIS)
 {
 	float scale;
 	
@@ -190,10 +190,10 @@ float lsm303_getGravity(const int16_t axis)
 		default: scale = 0.0;
 	};
 	
-	return (axis * scale / 1000.0);
+	return (AXIS * scale / 1000.0);
 }
 
-float lsm303_getGauss(const int16_t axis)
+float lsm303_getGauss(const int16_t AXIS)
 {
-	return (axis * 0.58 / 1000.0);
+	return (AXIS * 0.58 / 1000.0);
 }

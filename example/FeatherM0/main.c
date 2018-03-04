@@ -1,4 +1,5 @@
 #include <atmel_start.h>
+#include <stdio.h>
 #include "LSM303.h"
 #include "math.h" 
 #include "usb_start.h"
