@@ -20,8 +20,8 @@ int main(void)
 	
 	atmel_start_init();
 	lsm303_init(&wire);	
-	lsm303_configAcc(ACC_FS_2G, ACC_ODR_10_Hz);
-	lsm303_configMag(MAG_DO_10_Hz, MAG_OMXY_MEDIUM_PERFORMANCE, MAG_OMZ_MEDIUM_PERFORMANCE);
+	lsm303_configAcc(ACC_FS_2G, ACC_ODR_50_Hz);
+	lsm303_configMag(MAG_MODE_CONTINUOUS, MAG_DO_10_Hz, MAG_OMXY_LOW_POWER, MAG_OMZ_LOW_POWER);
 	
 	for(;;) {
 		/* Turn on LED if the DTR signal is set (serial terminal open on host) */

@@ -37,7 +37,7 @@ bool lsm303_init(struct i2c_m_sync_desc *const WIRE);
 
 bool lsm303_configAcc(const ACC_FS_t RANGE, const ACC_ODR_t RATE);
 
-bool lsm303_configMag(const MAG_DO_t RATE, const MAG_OMXY_t XYMODE, const MAG_OMZ_t ZMODE);
+bool lsm303_configMag(const MAG_MODE_t MODE, const MAG_DO_t RATE, const MAG_OMXY_t XYMODE, const MAG_OMZ_t ZMODE);
 
 bool lsm303_configTemp(const bool ENABLE);
 

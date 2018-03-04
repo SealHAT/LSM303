@@ -130,17 +130,21 @@ bool lsm303_configAcc(const ACC_FS_t RANGE, const ACC_ODR_t RATE)
 	return true;
 }
 
-bool lsm303_configMag(const MAG_DO_t RATE, const MAG_OMXY_t XYMODE, const MAG_OMZ_t ZMODE)
+bool lsm303_configMag(const MAG_MODE_t MODE, const MAG_DO_t RATE, const MAG_OMXY_t XYMODE, const MAG_OMZ_t ZMODE)
 {
 	uint8_t reg1 = readReg(LSM303_MAG, MAG_CTRL1);
+	uint8_t	reg3 = readReg(LSM303_MAG, MAG_CTRL3);
 	uint8_t reg4 = readReg(LSM303_MAG, MAG_CTRL4);
 	
 	reg1 &= ~(MAG_CTRL1_DO | MAG_CTRL1_OMXY);
+	reg3 &= ~(MAG_CTRL3_MODE);
 	reg4 &= ~(MAG_CTRL4_OMZ);
 	reg1 |= (RATE | XYMODE);
+	reg3 |= (MODE);
 	reg4 |= (ZMODE);
 
 	writeReg(LSM303_MAG, MAG_CTRL1, reg1);
+	writeReg(LSM303_MAG, MAG_CTRL3, reg3);
 	writeReg(LSM303_MAG, MAG_CTRL4, reg4);
 	return true;
 }

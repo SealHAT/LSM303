@@ -437,6 +437,13 @@ typedef enum {
 /*** MAGNETOMETER CONTROL REGISTER #3  ***/
 /*****************************************/
 typedef enum {
+	MAG_CTRL3_I2C			= 0x80,
+	MAG_CTRL3_LOWPOWER		= 0x20,
+	MAG_CTRL3_SPI			= 0x04,
+	MAG_CTRL3_MODE			= 0x03
+} MAG_CTRL3_MASKS_t;
+
+typedef enum {
 	MAG_I2C_ON		= 0x00,
 	MAG_I2C_OFF		= 0x80
 } MAG_I2C_t;
