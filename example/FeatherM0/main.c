@@ -15,22 +15,21 @@ int main(void)
 	char  output[STRING_SIZE];		/* A string used for output on USB */
 	AxesRaw_t xcel;					/* Accelerometer reading */
 	AxesRaw_t mag;					/* Magnetometer reading */
+	int16_t   temp;					/* Magnetometer temperature */
 	IMU_STATUS_t newAcc, newMag;	/* Indicate a new sample */
-	float x,y,z;					/* Float axis for string output */
+	float x,y,z,c;					/* Float axis for string output */
 	
 	atmel_start_init();
 	lsm303_init(&wire);	
-	lsm303_configAcc(ACC_FS_2G, ACC_ODR_50_Hz);
-	lsm303_configMag(MAG_MODE_CONTINUOUS, MAG_DO_10_Hz, MAG_OMXY_LOW_POWER, MAG_OMZ_LOW_POWER);
+	lsm303_startAcc(ACC_FS_2G, ACC_ODR_50_Hz);
+	lsm303_startMag(MAG_MODE_CONTINUOUS, MAG_DO_10_Hz, MAG_TEMP_ENABLE);
 	
 	for(;;) {
 		/* Turn on LED if the DTR signal is set (serial terminal open on host) */
 		gpio_set_pin_level(LED_BUILTIN, usb_dtr());
 
-		newAcc = lsm303_statusAcc();
-		newMag = lsm303_statusMag();
-
 		/* Read and print the Accelerometer if it is ready */
+		newAcc = lsm303_statusAcc();
 		if(newAcc != NULL_STATUS) {
 			xcel  = lsm303_readAcc();			
 			
@@ -47,15 +46,19 @@ int main(void)
 		}
 		
 		/* Read and print the Magnetometer if it is ready */
+		newMag = lsm303_statusMag();
 		if(newMag != NULL_STATUS) {
-			mag = lsm303_readMag();
+			mag  = lsm303_readMag();
+			temp = lsm303_readTemp();
 			
 			x = lsm303_getGauss(mag.xAxis);
 			y = lsm303_getGauss(mag.yAxis);
 			z = lsm303_getGauss(mag.zAxis);
+			c = lsm303_getCelcius(temp);
 			
 			/* Format as a string and output to USB Serial */
-			sprintf(output, "MAG: x=%d.%dgauss   y=%d.%dgauss   z=%d.%dgauss\n", (int)x, decPart(x, 1000), (int)y, decPart(y, 1000), (int)z, decPart(z, 1000));
+			sprintf(output, "MAG: x=%d.%dgauss   y=%d.%dgauss   z=%d.%dgauss    TEMP: %d.%d\n", 
+			        (int)x, decPart(x, 1000), (int)y, decPart(y, 1000), (int)z, decPart(z, 1000), (int)c, decPart(c, 100));
 			
 			if(usb_dtr()) {
 				usb_send_buffer((uint8_t*)output, strlen(output));

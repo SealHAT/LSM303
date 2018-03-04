@@ -113,7 +113,7 @@ bool lsm303_init(struct i2c_m_sync_desc *const WIRE)
 	return true;
 }
 
-bool lsm303_configAcc(const ACC_FS_t RANGE, const ACC_ODR_t RATE)
+bool lsm303_startAcc(const ACC_FS_t RANGE, const ACC_ODR_t RATE)
 {
 	uint8_t reg1 = accDefault.reg1;
 	uint8_t reg4 = accDefault.reg4;
@@ -130,36 +130,18 @@ bool lsm303_configAcc(const ACC_FS_t RANGE, const ACC_ODR_t RATE)
 	return true;
 }
 
-bool lsm303_configMag(const MAG_MODE_t MODE, const MAG_DO_t RATE, const MAG_OMXY_t XYMODE, const MAG_OMZ_t ZMODE)
+bool lsm303_startMag(const MAG_MODE_t MODE, const MAG_DO_t RATE, const MAG_TEMP_EN_t TEMPERATURE)
 {
 	uint8_t reg1 = readReg(LSM303_MAG, MAG_CTRL1);
 	uint8_t	reg3 = readReg(LSM303_MAG, MAG_CTRL3);
-	uint8_t reg4 = readReg(LSM303_MAG, MAG_CTRL4);
 	
-	reg1 &= ~(MAG_CTRL1_DO | MAG_CTRL1_OMXY);
+	reg1 &= ~(MAG_CTRL1_DO | MAG_CTRL1_TEMP);
 	reg3 &= ~(MAG_CTRL3_MODE);
-	reg4 &= ~(MAG_CTRL4_OMZ);
-	reg1 |= (RATE | XYMODE);
+	reg1 |= (RATE | TEMPERATURE);
 	reg3 |= (MODE);
-	reg4 |= (ZMODE);
 
 	writeReg(LSM303_MAG, MAG_CTRL1, reg1);
 	writeReg(LSM303_MAG, MAG_CTRL3, reg3);
-	writeReg(LSM303_MAG, MAG_CTRL4, reg4);
-	return true;
-}
-
-bool lsm303_configTemp(const bool ENABLE)
-{
-	uint8_t reg1 = readReg(LSM303_MAG, MAG_CTRL1);
-	
-	if(ENABLE) {
-		reg1 |= MAG_TEMP_ENABLE;
-	}
-	else {
-		reg1 &= ~(MAG_TEMP_ENABLE);
-	}
-	writeReg(LSM303_MAG, MAG_CTRL1, reg1);
 	return true;
 }
 
