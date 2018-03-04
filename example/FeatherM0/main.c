@@ -12,26 +12,26 @@ int decPart(const float VAL) {
 
 int main(void)
 {
-	
 	char  output[STRING_SIZE];		/* A string used for output on USB */
 	AxesRaw_t xcel;					/* Accelerometer reading */
 	float x,y,z;					/* Float axis for string output */
 	
 	atmel_start_init();
-	imu_init(&wire);	
-	acc_config(ACC_FS_2g, ACC_BDU_ENABLE, ACC_ENABLE_ALL, ACC_ODR_50_Hz, ACC_INCREMENT);
+	lsm303_init(&wire);	
+	lsm303_configAcc(ACC_FS_2G, ACC_ODR_10_Hz);
+	lsm303_configMag(MAG_DO_10_Hz, MAG_OMXY_LOW_POWER, MAG_OMZ_LOW_POWER);
 	
 	for(;;) {
 		/* Turn on LED if the DTR signal is set (serial terminal open on host) */
 		gpio_set_pin_level(LED_BUILTIN, usb_dtr());
 
 		/* Read the light sensor as both a exponent/mantissa and as an integer LUX value */
-		if(acc_getStatus() != NULL_STATUS) {
-			xcel  = acc_read();
+		if(lsm303_statusAcc() != NULL_STATUS) {
+			xcel  = lsm303_readAcc();
 			
-			x = (float)(xcel.xAxis*0.061/1000);
-			y = (float)(xcel.yAxis*0.061/1000);
-			z = (float)(xcel.zAxis*0.061/1000);
+			x = lsm303_getGravity(xcel.xAxis);
+			y = lsm303_getGravity(xcel.yAxis);
+			z = lsm303_getGravity(xcel.zAxis);
 		
 			/* Format as a string and output to USB Serial */
 			sprintf(output, "ACCEL: x=%d.%dg   y=%d.%dg   z=%d.%dg\n", (int)x, decPart(x), (int)y, decPart(y), (int)z, decPart(z));

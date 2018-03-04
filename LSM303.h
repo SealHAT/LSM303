@@ -13,7 +13,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include "LSM303CTypes.h"
 
 typedef struct {
@@ -21,12 +20,6 @@ typedef struct {
 	int16_t yAxis;
 	int16_t zAxis;
 } AxesRaw_t;
-
-typedef struct {
-	AxesRaw_t acc;
-	AxesRaw_t mag;
-	int16_t temp;
-} ImuReading_t;
 
 typedef enum {
 	NULL_STATUS				= 0x00,
@@ -40,20 +33,24 @@ typedef enum {
 	ZYX_OVERRUN             = 0x80
 } IMU_STATUS_t;
 
-bool imu_init(struct i2c_m_sync_desc *const WIRE);
+bool lsm303_init(struct i2c_m_sync_desc *const WIRE);
 
-bool acc_config(const ACC_FS_t RANGE, const ACC_BDU_t BLOCK_UPDATE, const ACC_AXIS_EN_t AXIS, const ACC_ODR_t RATE, const ACC_INCREMENT_t INCREMENT);
+bool lsm303_configAcc(const ACC_FS_t RANGE, const ACC_ODR_t RATE);
 
-IMU_STATUS_t acc_getStatus();
+bool lsm303_configMag(const MAG_DO_t RATE, const MAG_OMXY_t XYMODE, const MAG_OMZ_t ZMODE);
 
-AxesRaw_t acc_read();
+bool lsm303_configTemp(const bool ENABLE);
 
-bool mag_config(const MAG_TEMP_EN_t TEMP, const MAG_DO_t DO, const MAG_FS_t FS, const MAG_MD_t MD, const MAG_BDU_t BDU);
+IMU_STATUS_t lsm303_statusAcc();
 
-IMU_STATUS_t mag_getStatus();
+IMU_STATUS_t lsm303_statusMag();
 
-AxesRaw_t mag_read();
+AxesRaw_t lsm303_readAcc();
 
-ImuReading_t imu_read();
+AxesRaw_t lsm303_readMag();
+
+int16_t lsm303_readTemp();
+
+float lsm303_getGravity(const int16_t axis);
 
 #endif /* LSM303_H_ */
