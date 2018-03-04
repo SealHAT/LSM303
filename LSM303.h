@@ -53,4 +53,6 @@ int16_t lsm303_readTemp();
 
 float lsm303_getGravity(const int16_t axis);
 
+float lsm303_getGauss(const int16_t axis);
+
 #endif /* LSM303_H_ */

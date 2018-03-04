@@ -206,3 +206,8 @@ float lsm303_getGravity(const int16_t axis)
 	
 	return (axis * scale / 1000.0);
 }
+
+float lsm303_getGauss(const int16_t axis)
+{
+	return (axis * 0.58 / 1000.0);
+}

@@ -5,8 +5,8 @@
 
 #define STRING_SIZE (64)
 
-int decPart(const float VAL) {
-	int retval = (VAL * 100) - ((int)VAL * 100);
+int decPart(const float VAL, const int SIGFIG) {
+	int retval = (VAL * SIGFIG) - ((int)VAL * SIGFIG);
 	return (retval > 0 ? retval : retval * -1);
 }
 
@@ -14,32 +14,53 @@ int main(void)
 {
 	char  output[STRING_SIZE];		/* A string used for output on USB */
 	AxesRaw_t xcel;					/* Accelerometer reading */
+	AxesRaw_t mag;					/* Magnetometer reading */
+	IMU_STATUS_t newAcc, newMag;	/* Indicate a new sample */
 	float x,y,z;					/* Float axis for string output */
 	
 	atmel_start_init();
 	lsm303_init(&wire);	
 	lsm303_configAcc(ACC_FS_2G, ACC_ODR_10_Hz);
-	lsm303_configMag(MAG_DO_10_Hz, MAG_OMXY_LOW_POWER, MAG_OMZ_LOW_POWER);
+	lsm303_configMag(MAG_DO_10_Hz, MAG_OMXY_MEDIUM_PERFORMANCE, MAG_OMZ_MEDIUM_PERFORMANCE);
 	
 	for(;;) {
 		/* Turn on LED if the DTR signal is set (serial terminal open on host) */
 		gpio_set_pin_level(LED_BUILTIN, usb_dtr());
 
-		/* Read the light sensor as both a exponent/mantissa and as an integer LUX value */
-		if(lsm303_statusAcc() != NULL_STATUS) {
-			xcel  = lsm303_readAcc();
+		newAcc = lsm303_statusAcc();
+		newMag = lsm303_statusMag();
+
+		/* Read and print the Accelerometer if it is ready */
+		if(newAcc != NULL_STATUS) {
+			xcel  = lsm303_readAcc();			
 			
 			x = lsm303_getGravity(xcel.xAxis);
 			y = lsm303_getGravity(xcel.yAxis);
 			z = lsm303_getGravity(xcel.zAxis);
-		
+			
 			/* Format as a string and output to USB Serial */
-			sprintf(output, "ACCEL: x=%d.%dg   y=%d.%dg   z=%d.%dg\n", (int)x, decPart(x), (int)y, decPart(y), (int)z, decPart(z));
+			sprintf(output, "ACCEL: x=%d.%dg   y=%d.%dg   z=%d.%dg\n", (int)x, decPart(x, 1000), (int)y, decPart(y, 1000), (int)z, decPart(z, 1000));
 			
 			if(usb_dtr()) {
 				usb_send_buffer((uint8_t*)output, strlen(output));
 			}
 		}
+		
+		/* Read and print the Magnetometer if it is ready */
+		if(newMag != NULL_STATUS) {
+			mag = lsm303_readMag();
+			
+			x = lsm303_getGauss(mag.xAxis);
+			y = lsm303_getGauss(mag.yAxis);
+			z = lsm303_getGauss(mag.zAxis);
+			
+			/* Format as a string and output to USB Serial */
+			sprintf(output, "MAG: x=%d.%dgauss   y=%d.%dgauss   z=%d.%dgauss\n", (int)x, decPart(x, 1000), (int)y, decPart(y, 1000), (int)z, decPart(z, 1000));
+			
+			if(usb_dtr()) {
+				usb_send_buffer((uint8_t*)output, strlen(output));
+			}
+		}		
 	}
 }
 
