@@ -1,45 +1,70 @@
 #include <atmel_start.h>
+#include <stdio.h>
 #include "LSM303.h"
 #include "math.h" 
 #include "usb_start.h"
 
 #define STRING_SIZE (64)
 
-int decPart(const float VAL) {
-	int retval = (VAL * 100) - ((int)VAL * 100);
+int decPart(const float VAL, const int SIGFIG) {
+	int retval = (VAL * SIGFIG) - ((int)VAL * SIGFIG);
 	return (retval > 0 ? retval : retval * -1);
 }
 
 int main(void)
 {
-	
 	char  output[STRING_SIZE];		/* A string used for output on USB */
 	AxesRaw_t xcel;					/* Accelerometer reading */
-	float x,y,z;					/* Float axis for string output */
+	AxesRaw_t mag;					/* Magnetometer reading */
+	int16_t   temp;					/* Magnetometer temperature */
+	IMU_STATUS_t newAcc, newMag;	/* Indicate a new sample */
+	float x,y,z,c;					/* Float axis for string output */
 	
 	atmel_start_init();
-	imu_init(&wire);	
-	acc_config(ACC_FS_2g, ACC_BDU_ENABLE, ACC_ENABLE_ALL, ACC_ODR_50_Hz, ACC_INCREMENT);
+	lsm303_init(&wire);	
+	lsm303_startAcc(ACC_FS_2G, ACC_ODR_50_Hz);
+	lsm303_startMag(MAG_MODE_CONTINUOUS, MAG_DO_10_Hz, MAG_TEMP_ENABLE);
 	
 	for(;;) {
 		/* Turn on LED if the DTR signal is set (serial terminal open on host) */
 		gpio_set_pin_level(LED_BUILTIN, usb_dtr());
 
-		/* Read the light sensor as both a exponent/mantissa and as an integer LUX value */
-		if(acc_getStatus() != NULL_STATUS) {
-			xcel  = acc_read();
+		/* Read and print the Accelerometer if it is ready */
+		newAcc = lsm303_statusAcc();
+		if(newAcc != NULL_STATUS) {
+			xcel  = lsm303_readAcc();			
 			
-			x = (float)(xcel.xAxis*0.061/1000);
-			y = (float)(xcel.yAxis*0.061/1000);
-			z = (float)(xcel.zAxis*0.061/1000);
-		
+			x = lsm303_getGravity(xcel.xAxis);
+			y = lsm303_getGravity(xcel.yAxis);
+			z = lsm303_getGravity(xcel.zAxis);
+			
 			/* Format as a string and output to USB Serial */
-			sprintf(output, "ACCEL: x=%d.%dg   y=%d.%dg   z=%d.%dg\n", (int)x, decPart(x), (int)y, decPart(y), (int)z, decPart(z));
+			sprintf(output, "ACCEL: x=%d.%dg   y=%d.%dg   z=%d.%dg\n", (int)x, decPart(x, 1000), (int)y, decPart(y, 1000), (int)z, decPart(z, 1000));
 			
 			if(usb_dtr()) {
 				usb_send_buffer((uint8_t*)output, strlen(output));
 			}
 		}
+		
+		/* Read and print the Magnetometer if it is ready */
+		newMag = lsm303_statusMag();
+		if(newMag != NULL_STATUS) {
+			mag  = lsm303_readMag();
+			temp = lsm303_readTemp();
+			
+			x = lsm303_getGauss(mag.xAxis);
+			y = lsm303_getGauss(mag.yAxis);
+			z = lsm303_getGauss(mag.zAxis);
+			c = lsm303_getCelcius(temp);
+			
+			/* Format as a string and output to USB Serial */
+			sprintf(output, "MAG: x=%d.%dgauss   y=%d.%dgauss   z=%d.%dgauss    TEMP: %d.%d\n", 
+			        (int)x, decPart(x, 1000), (int)y, decPart(y, 1000), (int)z, decPart(z, 1000), (int)c, decPart(c, 100));
+			
+			if(usb_dtr()) {
+				usb_send_buffer((uint8_t*)output, strlen(output));
+			}
+		}		
 	}
 }
 

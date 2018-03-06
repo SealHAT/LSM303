@@ -24,21 +24,23 @@ typedef enum {
 	MAG_WHOAMI		= 0x3D
 } IMU_DEV_ID_t;
 
-typedef enum {
-	MODE_SPI,
-	MODE_I2C,
-} InterfaceMode_t;
+typedef struct {
+	uint8_t reg1;
+	uint8_t reg2;
+	uint8_t reg3;
+	uint8_t reg4;
+	uint8_t reg5;
+	uint8_t reg6;
+	uint8_t reg7;
+} accConfig_t;
 
-typedef enum {
-	MAG,
-	ACC
-} CHIP_t;
-
-typedef enum {
-	xAxis,
-	yAxis,
-	zAxis
-} AXIS_t;
+typedef struct {
+	uint8_t reg1;
+	uint8_t reg2;
+	uint8_t reg3;
+	uint8_t reg4;
+	uint8_t reg5;
+} magConfig_t;
 
 /***********************************************/
 /***     LSM303C Accelerometer Registers     ***/
@@ -87,7 +89,14 @@ typedef enum {
 /*** ACCELEROMETER CONTROL REGISTER #1 ***/
 /*****************************************/
 typedef enum {
-	ACC_HR_DISABLE		= 0x80,
+	ACC_CTRL1_HR		= 0x80,
+	ACC_CTRL1_ODR		= 0x70,
+	ACC_CTRL1_BDU		= 0x08,
+	ACC_CTRL1_AXIS		= 0x07
+} ACC_CTRL1_MASKS_t;
+
+typedef enum {
+	ACC_HR_DISABLE		= 0x00,
 	ACC_HR_ENABLE		= 0x80,
 } ACC_HR_t;
 
@@ -119,6 +128,13 @@ typedef enum {
 /*** ACCELEROMETER CONTROL REGISTER #2 ***/
 /*****************************************/
 typedef enum {
+	ACC_CTRL2_DFC			= 0x60,
+	ACC_CTRL2_HPM			= 0x18,
+	ACC_CTRL2_FDS			= 0x04,
+	ACC_CTRL2_HPIS		    = 0x03
+} ACC_CTRL2_MASKS_t;
+
+typedef enum {
 	ACC_HIGHPASS_ODR_50		= 0x00,
 	ACC_HIGHPASS_ODR_100	= 0x20,
 	ACC_HIGHPASS_ODR_9		= 0x40,
@@ -146,6 +162,12 @@ typedef enum {
 /*** ACCELEROMETER CONTROL REGISTER #3 ***/
 /*****************************************/
 typedef enum {
+	ACC_CTRL3_FIFOEN		= 0x80,
+	ACC_CTRL3_THRESH		= 0x40,
+	ACC_CTRL3_ISREN			= 0x3F
+} ACC_CTRL3_MASKS_t;
+
+typedef enum {
 	ACC_FIFO_OFF			= 0x00,
 	ACC_FIFO_ON				= 0x80
 } ACC_FIFO_ENABLE_t;
@@ -156,6 +178,7 @@ typedef enum {
 } ACC_FIFO_THRESHOLD_t;
 
 typedef enum {
+	ACC_ISR_NONE			= 0x00,
 	ACC_ISR_INACTIVITYT		= 0x20,
 	ACC_ISR_GENERATOR2		= 0x10,
 	ACC_ISR_GENERATOR1		= 0x08,
@@ -168,6 +191,15 @@ typedef enum {
 /*** ACCELEROMETER CONTROL REGISTER #4 ***/
 /*****************************************/
 typedef enum {
+	ACC_CTRL4_BW			= 0xC0,
+	ACC_CTRL4_FS			= 0x30,
+	ACC_CTRL4_SCALEODR		= 0x08,
+	ACC_CTRL4_INCREMENT		= 0x04,
+	ACC_CTRL4_I2C			= 0x02,
+	ACC_CTRL4_SPI			= 0x01
+} ACC_CTRL4_MASKS_t;
+
+typedef enum {
 	ACC_BW_400			= 0x00,
 	ACC_BW_200			= 0x10,
 	ACC_BW_100			= 0x80,
@@ -175,9 +207,9 @@ typedef enum {
 } ACC_BW_t;
 
 typedef enum {
-	ACC_FS_2g = 0x00,
-	ACC_FS_4g = 0x20,
-	ACC_FS_8g = 0x30
+	ACC_FS_2G = 0x00,
+	ACC_FS_4G = 0x20,
+	ACC_FS_8G = 0x30
 } ACC_FS_t;
 
 typedef enum {
@@ -330,11 +362,11 @@ typedef enum {
 /***********************************************/
 typedef enum {
 	MAG_WHO_AM_I   = 0x0F,
-	MAG_CTRL_REG1  = 0x20,
-	MAG_CTRL_REG2  = 0x21,
-	MAG_CTRL_REG3  = 0x22,
-	MAG_CTRL_REG4  = 0x23,
-	MAG_CTRL_REG5  = 0x24,
+	MAG_CTRL1	   = 0x20,
+	MAG_CTRL2      = 0x21,
+	MAG_CTRL3      = 0x22,
+	MAG_CTRL4      = 0x23,
+	MAG_CTRL5      = 0x24,
 	MAG_STATUS_REG = 0x27,
 	MAG_OUTX_L     = 0x28,
 	MAG_OUTX_H     = 0x29,
@@ -354,12 +386,20 @@ typedef enum {
 /*** MAGNETOMETER CONTROL REGISTER #1  ***/
 /*****************************************/
 typedef enum {
-	MAG_TEMP_EN_DISABLE = 0x00,
-	MAG_TEMP_EN_ENABLE  = 0x80
+	MAG_CTRL1_TEMP			= 0x80,
+	MAG_CTRL1_OMXY			= 0x60,
+	MAG_CTRL1_DO			= 0x1C,
+	MAG_CTRL1_SELFTEST		= 0x01
+} MAG_CTRL1_MASKS_t;
+
+typedef enum {
+	MAG_TEMP_DISABLE = 0x00,
+	MAG_TEMP_ENABLE  = 0x80
 } MAG_TEMP_EN_t;
 
 typedef enum {
-	MAG_SELFTEST		= 0x01
+	MAG_SELFTEST_OFF	= 0x00,
+	MAG_SELFTEST_ON		= 0x01
 } MAG_SELF_TEST_t;
 
 typedef enum {
@@ -388,17 +428,20 @@ typedef enum {
 } MAG_FS_t;
 
 typedef enum {
-	MAG_CTRL2_REBOOT	= 0x08,
-	MAG_CTRL2_SOFT_RST	= 0x04
+	MAG_RESET_OFF		= 0x00,
+	MAG_REBOOT			= 0x08,
+	MAG_SOFT_RST		= 0x04
 } MAG_RESET_t;
 
 /*****************************************/
 /*** MAGNETOMETER CONTROL REGISTER #3  ***/
 /*****************************************/
 typedef enum {
-	MAG_LOWPOWER_ON	 = 0x20,
-	MAG_LOWPOWER_OFF = 0x20
-} MAG_LOWPOWER_t;
+	MAG_CTRL3_I2C			= 0x80,
+	MAG_CTRL3_LOWPOWER		= 0x20,
+	MAG_CTRL3_SPI			= 0x04,
+	MAG_CTRL3_MODE			= 0x03
+} MAG_CTRL3_MASKS_t;
 
 typedef enum {
 	MAG_I2C_ON		= 0x00,
@@ -406,22 +449,31 @@ typedef enum {
 } MAG_I2C_t;
 
 typedef enum {
+	MAG_LOWPOWER_OFF = 0x00,
+	MAG_LOWPOWER_ON	 = 0x20
+} MAG_LOWPOWER_t;
+
+typedef enum {
 	MAG_SPI_OFF		= 0x00,
 	MAG_SPI_ON		= 0x04
 } MAG_SPI_t;
 
 typedef enum {
-	MAG_MD_CONTINUOUS   = 0x00,
-	MAG_MD_SINGLE       = 0x01,
-	MAG_MD_POWER_DOWN_1 = 0x02,
-	MAG_MD_POWER_DOWN_2 = 0x03
-} MAG_MD_t;
+	MAG_MODE_CONTINUOUS   = 0x00,
+	MAG_MODE_SINGLE       = 0x01,
+	MAG_MODE_OFF		  = 0x03
+} MAG_MODE_t;
 
 /*****************************************/
 /*** MAGNETOMETER CONTROL REGISTER #4  ***/
 /*****************************************/
 typedef enum {
-	MAG_OMZ_LOW_PW                  =  0x00,
+	MAG_CTRL4_OMZ					= 0x0C,
+	MAG_CTRL4_ENDIAN				= 0x02
+} MAG_CTRL4_MASKS_t;
+
+typedef enum {
+	MAG_OMZ_LOW_POWER               =  0x00,
 	MAG_OMZ_MEDIUM_PERFORMANCE      =  0x04,
 	MAG_OMZ_HIGH_PERFORMANCE        =  0x08,
 	MAG_OMZ_ULTRA_HIGH_PERFORMANCE  =  0x0C
