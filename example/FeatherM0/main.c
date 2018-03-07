@@ -1,130 +1,56 @@
 #include <atmel_start.h>
+#include <stdio.h>
 #include "LSM303.h"
+#include "math.h"
 #include "usb_start.h"
-#include "math.h" 
 
-<<<<<<< HEAD
-const uint8_t ReadybitMASK = 0b00001000;
+#define STRING_SIZE (64)
 
-
-int32_t acc_SelfTest()
-{
-	uint8_t Status = 0b00000000;
-	AxesRaw_t AxesNOST;
-	AxesRaw_t AxesST;
-	
-	writeReg(ACC_I2C_ADDR, ACC_CTRL1, 0x2F); //Initialize sensor, turn on sensor
-	writeReg(ACC_I2C_ADDR, ACC_CTRL4, 0x04); //FS = 2g
-	writeReg(ACC_I2C_ADDR, ACC_CTRL5, 0x00); //Disable acc self-test
-	delay_ms(200);
-	
-	do{
-		acc_read();
-		Status = acc_getStatus();
-	}while((Status&ReadybitMASK) == 0);
-	
-	if((Status&ReadybitMASK) != 0)
-	{
-		AxesNOST = acc_read();
-	}
-	
-	writeReg(ACC_I2C_ADDR, ACC_CTRL5, 0x04); //Enable acc self-test
-	delay_ms(80);
-	
-	do{
-		acc_read();
-		Status = acc_getStatus();
-	}while((Status&ReadybitMASK) == 0);
-	
-	if((Status&ReadybitMASK) != 0){
-		AxesST = acc_read();
-	}
-	
-	int abs_X = abs(AxesNOST.xAxis - AxesST.xAxis);
-	int abs_Y = abs(AxesNOST.yAxis - AxesST.yAxis);
-	int abs_Z = abs(AxesNOST.zAxis - AxesST.zAxis);
-	
-	if(	   (((abs_X*0.061) <= 1500) && ((abs_X*0.061) >= 70))
-	&& (((abs_Y*0.061) <= 1500) && ((abs_Y*0.061) >= 70))
-	&& (((abs_Z*0.061) <= 1500) && ((abs_Z*0.061) >= 70))
-	)
-	{
-		return 0;
-	}
-	else
-	{
-		return -1;
-	}
-	writeReg(ACC_I2C_ADDR, ACC_CTRL5, 0x00); //Disable acc self-test
-	
+int decPart(const float VAL, const int SIGFIG) {
+	int retval = (VAL * SIGFIG) - ((int)VAL * SIGFIG);
+	return (retval > 0 ? retval : retval * -1);
 }
 
-/*int32_t mag_SelfTest()
-=======
-int main(void)
->>>>>>> a53441ff19ab7f1ae13ffb9165ee67950600756f
-{
-	uint8_t Status = 0b00000000;
-	int OUTX_NOST, OUTY_NOST, OUTZ_NOST;
-	int OUTX_ST, OUTY_ST, OUTZ_ST;
-	
-	//magnetometer self-test
-	mag_writeReg1(&wire,MAG_CTRL_REG1, 0x18);
-	mag_writeReg1(&wire,MAG_CTRL_REG2, 0x60);
-	mag_writeReg1(&wire,MAG_CTRL_REG3, 0x00);
-	mag_writeReg1(&wire,MAG_CTRL_REG5, 0x40);
-	delay_ms(20);
-	
-	do
-	{
-		mag_clearREADYbit();
-		Status = mag_readReg1(&wire,MAG_STATUS_REG);
-		//gpio_toggle_pin_level(LED_BUILTIN);
-		//delay_ms(10);
-	} while ((Status&ReadybitMASK) == 0);
-	if((Status&ReadybitMASK) != 0)
-	{
-		mag_readXYZ(&OUTX_NOST, &OUTY_NOST, &OUTZ_NOST);
-	}
-	
-	mag_writeReg1(&wire,MAG_CTRL_REG1, 0x19); //Enable mag self-test
-	delay_ms(60);
-	
-	do
-	{
-		mag_clearREADYbit();
-		Status = mag_readReg1(&wire,MAG_STATUS_REG);
-		//gpio_toggle_pin_level(LED_BUILTIN);
-		//delay_ms(10);
-	} while ((Status&ReadybitMASK) == 0);
-	if((Status&ReadybitMASK) != 0)
-	{
-		mag_readXYZ(&OUTX_ST, &OUTY_ST, &OUTZ_ST);
-	}
-	
-	int abs_X = abs(OUTX_ST - OUTX_NOST);
-	int abs_Y = abs(OUTY_ST - OUTY_NOST);
-	int abs_Z = abs(OUTZ_ST - OUTZ_NOST);
-	
-	while(	(((abs_X*0.58/1000) >= 1) && ((abs_X*0.58/1000) <= 3))
-	&&	(((abs_Z*0.58/1000) >= 0.1) && ((abs_Z*0.58/1000) <= 1))
-	&&	(((abs_Y*0.58/1000) >= 1) && ((abs_Y*0.58/1000) <= 3))
-	)
-	{
-		return 0;
-	}
-	else
-	{
-		return -1;
-	}
-	
-}*/
-
 int main(void)
 {
+	char  output[STRING_SIZE];		/* A string used for output on USB */
+	AxesRaw_t xcel;					/* Accelerometer reading */
+	AxesRaw_t mag;					/* Magnetometer reading */
+	int16_t   temp;					/* Magnetometer temperature */
+	IMU_STATUS_t newAcc, newMag;	/* Indicate a new sample */
 	
 	atmel_start_init();
-	imu_init(&wire);
+	lsm303_init(&wire);
+	lsm303_startAcc(ACC_FS_2G, ACC_ODR_50_Hz);
+	lsm303_startMag(MAG_MODE_CONTINUOUS, MAG_DO_40_Hz, MAG_TEMP_ENABLE);
 	
-}
+	for(;;) {
+		/* Turn on LED if the DTR signal is set (serial terminal open on host) */
+		gpio_set_pin_level(LED_BUILTIN, usb_dtr());
 
+		/* Read and print the Accelerometer if it is ready */
+		newAcc = lsm303_statusAcc();
+		if(newAcc != NULL_STATUS) {
+			xcel  = lsm303_readAcc();
+			
+			/* Print the data if USB is available */
+			if(usb_dtr()) {
+				snprintf(output, STRING_SIZE, "XCEL:%d,%d,%d,%d\n", ACC_FS_2G, xcel.xAxis, xcel.yAxis, xcel.zAxis);
+				usb_send_buffer((uint8_t*)output, strlen(output));
+			}
+		}
+		
+		/* Read and print the Magnetometer if it is ready */
+		newMag = lsm303_statusMag();
+		if(newMag != NULL_STATUS) {
+			mag  = lsm303_readMag();
+			temp = lsm303_readTemp();
+			
+			/* Print the data if USB is available */
+			if(usb_dtr()) {
+				snprintf(output, STRING_SIZE, "MAG:%d,%d,%d,%d\n", mag.xAxis, mag.yAxis, mag.zAxis, temp);
+				usb_send_buffer((uint8_t*)output, strlen(output));
+			}
+		}
+	}
+}

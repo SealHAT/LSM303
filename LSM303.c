@@ -5,258 +5,195 @@
  *  Author: hpan5
  */ 
 #include "LSM303.h"
+#include "math.h"
 
-#define SENSITIVITY_ACC		(0.06103515625)		/* LSB/mg */
-#define SENSITIVITY_MAG		(0.00048828125)		/* LSB/Ga */
+static struct i2c_m_sync_desc lsm303c_sync; /* Structure for IMU communications */
+static ACC_FS_t currentScale;
 
-static struct i2c_m_sync_desc lsm303c_sync;		/* Structure for IMU communications */
+static const accConfig_t accDefault = {
+	.reg1 = ACC_HR_DISABLE | ACC_ODR_POWER_DOWN | ACC_BDU_ENABLE | ACC_ENABLE_ALL,
+	.reg2 = ACC_HIGHPASS_ODR_50 | ACC_HIGHPASS_NORMAL | ACC_FDS_INTERNAL_BYPASS | ACC_ISR1_HP_BYPASS | ACC_ISR2_HP_BYPASS,
+	.reg3 = ACC_FIFO_OFF | ACC_FIFO_THRESHOLD_OFF | ACC_ISR_NONE,
+	.reg4 = ACC_BW_400 | ACC_FS_2G | ACC_SCALE_ODR_OFF | ACC_INCREMENT | ACC_I2C_ON | ACC_SPI_OFF,
+	.reg5 = ACC_DEBUG_OFF | ACC_NO_RESET | ACC_NO_DECIMATION | ACC_SELF_TEST_OFF | ACC_ISR_ACTIVE_HI | ACC_ISR_PUSHPULL,
+	.reg6 = ACC_NO_REBOOT,
+	.reg7 = ACC_DCRM1_OFF | ACC_DCRM2_OFF | ACC_ISR1_LATCH_OFF | ACC_ISR2_LATCH_OFF | ACC_ISR1_4D_OFF | ACC_ISR2_4D_OFF
+};
 
-/* Read a single register from the IMU */
-static uint8_t readReg(const I2C_ADDR_t DEVICE_ADDRESS, const uint8_t REG)
-{
+static const magConfig_t magDefault = {
+	.reg1 = MAG_TEMP_DISABLE | MAG_SELFTEST_OFF | MAG_OMXY_LOW_POWER | MAG_DO_10_Hz,
+	.reg2 = MAG_FS_16_Ga | MAG_RESET_OFF,
+	.reg3 = MAG_I2C_ON | MAG_LOWPOWER_OFF | MAG_SPI_OFF | MAG_MODE_OFF,
+	.reg4 = MAG_OMZ_LOW_POWER | MAG_BIG_ENDIAN,
+	.reg5 = MAG_BDU_ENABLE
+};
+
+/* Read a single register for accelerometer*/
+ static uint8_t readReg(const LSM303_DEV_ADDR_t SLAVE_ADDRESS, const uint8_t REG){
 	uint8_t retval;
-	i2c_m_sync_set_slaveaddr(&lsm303c_sync, DEVICE_ADDRESS, I2C_M_SEVEN);
+	i2c_m_sync_set_slaveaddr(&lsm303c_sync, SLAVE_ADDRESS, I2C_M_SEVEN);
 	i2c_m_sync_cmd_read(&lsm303c_sync, REG, &retval, 1);
 	return retval;
 }
 
-/* Write a single register to the IMU */
-static void writeReg(const I2C_ADDR_t DEVICE_ADDRESS, const uint8_t REG, uint8_t val)
-{
-	i2c_m_sync_set_slaveaddr(&lsm303c_sync, DEVICE_ADDRESS, I2C_M_SEVEN);
-	i2c_m_sync_cmd_write(&lsm303c_sync, REG, &val, 1);
+/* @brief Read a single register
+ *
+ * @param SLAVE_ADDRESS [IN] The I2C Slave Address of the desired device
+ * @param Reg [IN] The register to write to
+ * @param val [IN] The value to write to the register
+ * @return Zero if successful, otherwise an error code listed below
+ *     -1: Received ACK from device on I2C bus
+ *     -2: Received NACK from device on I2C bus
+ *     -3: Arbitration lost
+ *     -4: Bad address
+ *     -5: Bus error
+ *     -6: Device busy
+ *     -7: Package collision
+ */
+ static int32_t writeReg(const LSM303_DEV_ADDR_t SLAVE_ADDRESS, const uint8_t Reg, uint8_t val)
+ {
+	struct _i2c_m_msg msg;
+	uint8_t buff[2];
+	buff[0] = Reg;
+	buff[1] = val;
+	
+	msg.addr   = SLAVE_ADDRESS;
+	msg.len    = 2;
+	msg.flags  = I2C_M_STOP;
+	msg.buffer = buff;
+	
+	return _i2c_m_sync_transfer(&lsm303c_sync.device, &msg);
 }
 
-bool imu_init(struct i2c_m_sync_desc *const WIRE)
+static uint32_t readContinous(const LSM303_DEV_ADDR_t SLAVE_ADDRESS, const uint8_t STARTING_REG, uint8_t* buf, const uint32_t LEN)
+{
+	uint32_t retval = I2C_ERR_BAD_ADDRESS;
+	struct _i2c_m_msg msg;
+	
+	msg.addr   = SLAVE_ADDRESS;
+	msg.len    = 1;
+	msg.flags  = 0;
+	msg.buffer = (uint8_t*)&STARTING_REG;
+	
+	retval = _i2c_m_sync_transfer(&lsm303c_sync.device, &msg);
+	
+	msg.addr   = SLAVE_ADDRESS;
+	msg.len    = LEN;
+	msg.flags  = I2C_M_RD | I2C_M_STOP;
+	msg.buffer = buf;
+	
+	retval = _i2c_m_sync_transfer(&lsm303c_sync.device, &msg);
+
+	return retval;
+}
+
+bool lsm303_init(struct i2c_m_sync_desc *const WIRE)
 {
 	lsm303c_sync  = *WIRE;
 	i2c_m_sync_enable(&lsm303c_sync);
+	
+	/* Configure Accelerometer with default settings */
+	writeReg(LSM303_ACCEL, ACC_CTRL1, accDefault.reg1);
+	writeReg(LSM303_ACCEL, ACC_CTRL2, accDefault.reg2);
+	writeReg(LSM303_ACCEL, ACC_CTRL3, accDefault.reg3);
+	writeReg(LSM303_ACCEL, ACC_CTRL4, accDefault.reg4);
+	writeReg(LSM303_ACCEL, ACC_CTRL5, accDefault.reg5);
+	writeReg(LSM303_ACCEL, ACC_CTRL6, accDefault.reg6);
+	writeReg(LSM303_ACCEL, ACC_CTRL7, accDefault.reg7);
+	
+	currentScale = (accDefault.reg4 & ACC_CTRL4_FS);
+	
+	/* Configure Magnetometer with default settings */
+	writeReg(LSM303_MAG, MAG_CTRL1, magDefault.reg1);
+	writeReg(LSM303_MAG, MAG_CTRL2, magDefault.reg2);
+	writeReg(LSM303_MAG, MAG_CTRL3, magDefault.reg3);
+	writeReg(LSM303_MAG, MAG_CTRL4, magDefault.reg4);
+	writeReg(LSM303_MAG, MAG_CTRL5, magDefault.reg5);
+	
 	return true;
-<<<<<<< HEAD
 }
 
-bool acc_config(const ACC_FS_t RANGE, const ACC_BDU_t BLOCK_UPDATE, const uint8_t AXIS, const ACC_ODR_t RATE)
+bool lsm303_startAcc(const ACC_FS_t RANGE, const ACC_ODR_t RATE)
 {
-	/* Basic Read-modify-write operation to leave other values unchanged */
-	uint8_t reg1 = readReg(ACC_I2C_ADDR, ACC_CTRL1);
-	uint8_t reg4 = readReg(ACC_I2C_ADDR, ACC_CTRL4);
+	uint8_t reg1 = accDefault.reg1;
+	uint8_t reg4 = accDefault.reg4;
+
+	currentScale = RANGE;
 	
-	reg1 |= (BLOCK_UPDATE | AXIS | RATE);
+	reg1 &= ~(ACC_CTRL1_ODR);
+	reg4 &= ~(ACC_CTRL4_FS);
+	reg1 |= (RATE);
 	reg4 |= (RANGE);
-	
-	writeReg(ACC_I2C_ADDR, ACC_CTRL1, reg1);
-	writeReg(ACC_I2C_ADDR, ACC_CTRL1, reg4);
-	
+
+	writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
+	writeReg(LSM303_ACCEL, ACC_CTRL4, reg4);
 	return true;
 }
 
-ACC_STATUS_FLAGS_t acc_getStatus()
+bool lsm303_startMag(const MAG_MODE_t MODE, const MAG_DO_t RATE, const MAG_TEMP_EN_t TEMPERATURE)
 {
-	return readReg(ACC_I2C_ADDR, ACC_STATUS);	
-}
+	uint8_t reg1 = readReg(LSM303_MAG, MAG_CTRL1);
+	uint8_t	reg3 = readReg(LSM303_MAG, MAG_CTRL3);
+	
+	reg1 &= ~(MAG_CTRL1_DO | MAG_CTRL1_TEMP);
+	reg3 &= ~(MAG_CTRL3_MODE);
+	reg1 |= (RATE | TEMPERATURE);
+	reg3 |= (MODE);
 
-AxesRaw_t acc_read()
-{
-	AxesRaw_t retval;	/* Return value, all three axis */
-	uint8_t dataHigh;	/* For collecting the MSB of an axis */
-	uint8_t dataLow;	/* For collecting the LSB of an axis */
-	
-	dataLow  = readReg(ACC_I2C_ADDR, ACC_OUT_X_L);
-	dataHigh = readReg(ACC_I2C_ADDR, ACC_OUT_X_H);
-	retval.xAxis = (int16_t)(dataLow | (dataHigh << 8));
-	
-	dataLow  = readReg(ACC_I2C_ADDR, ACC_OUT_Y_L);
-	dataHigh = readReg(ACC_I2C_ADDR, ACC_OUT_Y_H);
-	retval.yAxis = (int16_t)(dataLow | (dataHigh << 8));
-	
-	dataLow  = readReg(ACC_I2C_ADDR, ACC_OUT_Z_L);
-	dataHigh = readReg(ACC_I2C_ADDR, ACC_OUT_Z_H);
-	retval.zAxis = (int16_t)(dataLow | (dataHigh << 8));
-	
-	return retval;
-=======
-}
-
-bool acc_config(const ACC_FS_t RANGE, const ACC_BDU_t BLOCK_UPDATE, const ACC_AXIS_EN_t AXIS, const ACC_ODR_t RATE, const ACC_IF_ADD_INC_t INCREMENT)
-{
-	/* Basic Read-modify-write operation to leave other values unchanged */
-	uint8_t reg1 = readReg(ACC_I2C_ADDR, ACC_CTRL1);
-	uint8_t reg4 = readReg(ACC_I2C_ADDR, ACC_CTRL4);
-	
-	reg1 |= (BLOCK_UPDATE | AXIS | RATE);
-	reg4 |= (RANGE | INCREMENT);
-	
-	writeReg(ACC_I2C_ADDR, ACC_CTRL1, reg1);
-	writeReg(ACC_I2C_ADDR, ACC_CTRL4, reg4);
-	
+	writeReg(LSM303_MAG, MAG_CTRL1, reg1);
+	writeReg(LSM303_MAG, MAG_CTRL3, reg3);
 	return true;
 }
 
-ACC_STATUS_FLAGS_t acc_getStatus()
+IMU_STATUS_t lsm303_statusAcc()
 {
-	return readReg(ACC_I2C_ADDR, ACC_STATUS);	
+	return (IMU_STATUS_t)readReg(LSM303_ACCEL, ACC_STATUS);
 }
 
-AxesRaw_t acc_read()
+IMU_STATUS_t lsm303_statusMag()
 {
-	AxesRaw_t retval;	/* Return value, all three axis */
-	uint8_t dataHigh;	/* For collecting the MSB of an axis */
-	uint8_t dataLow;	/* For collecting the LSB of an axis */
-	
-	dataLow  = readReg(ACC_I2C_ADDR, ACC_OUT_X_L);
-	dataHigh = readReg(ACC_I2C_ADDR, ACC_OUT_X_H);
-	retval.xAxis = (int16_t)(dataLow | (dataHigh << 8));
-	
-	dataLow  = readReg(ACC_I2C_ADDR, ACC_OUT_Y_L);
-	dataHigh = readReg(ACC_I2C_ADDR, ACC_OUT_Y_H);
-	retval.yAxis = (int16_t)(dataLow | (dataHigh << 8));
-	
-	dataLow  = readReg(ACC_I2C_ADDR, ACC_OUT_Z_L);
-	dataHigh = readReg(ACC_I2C_ADDR, ACC_OUT_Z_H);
-	retval.zAxis = (int16_t)(dataLow | (dataHigh << 8));
-	
-	return retval;
+	return (IMU_STATUS_t)readReg(LSM303_MAG, MAG_STATUS_REG);
 }
 
-int32_t acc_SelfTest()
+AxesRaw_t lsm303_readAcc()
 {
-	uint8_t Status = 0x00;
-	int OUTX_NOST, OUTY_NOST, OUTZ_NOST;
-	int OUTX_ST, OUTY_ST, OUTZ_ST;
-	
-	writeReg(ACC_I2C_ADDR, ACC_CTRL1, ACC_ODR_50_Hz | ACC_BDU_ENABLE | ACC_X_ENABLE | ACC_Y_ENABLE | ACC_Z_ENABLE);
-	writeReg(ACC_I2C_ADDR, ACC_CTRL4, ACC_FS_4g); //FS = 2g
-	writeReg(ACC_I2C_ADDR, ACC_CTRL5, 0x00); //Disable acc self-test
-	delay_ms(200);
-	
-	do{
-		acc_clearREADYbit();
-		Status = readReg(ACC_I2C_ADDR, ACC_STATUS);
-	}while((Status & ACC_ZYX_NEW_DATA_AVAILABLE) == 0);
-	
-	if((Status & ACC_ZYX_NEW_DATA_AVAILABLE) != 0)
-	{
-		acc_readXYZ(&OUTX_NOST,&OUTY_NOST,&OUTZ_NOST);
-	}
-	
-	acc_writeReg1(&wire,ACC_CTRL5, 0x04); //Enable acc self-test
-	delay_ms(80);
-	
-	do{
-		acc_clearREADYbit();
-		Status = acc_readReg1(&wire,ACC_STATUS);
-	}while((Status & ACC_ZYX_NEW_DATA_AVAILABLE) == 0);
-	
-	if((Status & ACC_ZYX_NEW_DATA_AVAILABLE) != 0){
-		acc_readXYZ(&OUTX_ST,&OUTY_ST,&OUTZ_ST);
-		gpio_set_pin_level(LED_BUILTIN,true);
-	}
-	
-	int abs_X = abs(OUTX_ST - OUTX_NOST);
-	int abs_Y = abs(OUTY_ST - OUTY_NOST);
-	int abs_Z = abs(OUTZ_ST - OUTZ_NOST);
-	
-	if(	   (((abs_X*0.061) <= 1500) && ((abs_X*0.061) >= 70))
-	&& (((abs_Y*0.061) <= 1500) && ((abs_Y*0.061) >= 70))
-	&& (((abs_Z*0.061) <= 1500) && ((abs_Z*0.061) >= 70))
-	)
-	{
-		return 0;
-	}
-	else
-	{
-		return -1;
-	}
-	acc_writeReg1(&wire,ACC_CTRL5, 0x00); //Disable acc self-test
->>>>>>> a53441ff19ab7f1ae13ffb9165ee67950600756f
-}
-/*
-bool mag_config(const MAG_DO_t RATE, const MAG_FS_t SCALE, const MAG_BDU_t BLOCK_UPDATE, const MAG_OMXY_t PWR_MODE, const MAG_OMZ_t PERFORMANCE, const MAG_MD_t CONV_MODE)
-{
-	
-}*/
-
-<<<<<<< HEAD
-AxesRaw_t mag_read()
-{
-	AxesRaw_t retval;	/* Return value, all three axis */
-	uint8_t dataHigh;	/* For collecting the MSB of an axis */
-	uint8_t dataLow;	/* For collecting the LSB of an axis */
-	
-	dataLow  = readReg(MAG_I2C_ADDR, MAG_OUTX_L);
-	dataHigh = readReg(MAG_I2C_ADDR, MAG_OUTX_H);
-	retval.xAxis = (int16_t)(dataLow | (dataHigh << 8));
-		
-	dataLow  = readReg(MAG_I2C_ADDR, MAG_OUTY_L);
-	dataHigh = readReg(MAG_I2C_ADDR, MAG_OUTY_H);
-	retval.yAxis = (int16_t)(dataLow | (dataHigh << 8));
-		
-	dataLow  = readReg(MAG_I2C_ADDR, MAG_OUTZ_L);
-	dataHigh = readReg(MAG_I2C_ADDR, MAG_OUTZ_L);
-	retval.zAxis = (int16_t)(dataLow | (dataHigh << 8));
-		
-	return retval;
+	AxesRaw_t Axes;
+	readContinous(LSM303_ACCEL, ACC_OUT_X_L, (uint8_t*)&Axes, 6);
+	return Axes;
 }
 
-int16_t imu_readTemp()
+AxesRaw_t lsm303_readMag()
 {
-	uint8_t dataHigh;	/* For collecting the MSB of an axis */
-	uint8_t dataLow;	/* For collecting the LSB of an axis */
-	
-	dataLow  = readReg(MAG_I2C_ADDR, MAG_TEMP_OUT_L);
-	dataHigh = readReg(MAG_I2C_ADDR, MAG_TEMP_OUT_H);
-	
-=======
-bool mag_config(const MAG_DO_t RATE, const MAG_FS_t SCALE, const MAG_BDU_t BLOCK_UPDATE, const MAG_OMXY_t OMXY, const MAG_OMZ_t OMZ, const MAG_MD_t CONV_MODE)
-{
-	/* Basic Read-modify-write operation to leave other values unchanged */
-	uint8_t reg1 = readReg(MAG_I2C_ADDR, ACC_CTRL1);
-	uint8_t reg2 = readReg(MAG_I2C_ADDR, ACC_CTRL2);
-	uint8_t reg3 = readReg(MAG_I2C_ADDR, ACC_CTRL3);
-	uint8_t reg4 = readReg(MAG_I2C_ADDR, ACC_CTRL4);
-	uint8_t reg5 = readReg(MAG_I2C_ADDR, ACC_CTRL5);
-	
-	reg1 |= (RATE | OMXY);
-	reg2 |= SCALE;
-	reg3 |= CONV_MODE;
-	reg4 |= OMZ;
-	reg5 |= BLOCK_UPDATE;
-	
-	writeReg(MAG_I2C_ADDR, ACC_CTRL1, reg1);
-	writeReg(MAG_I2C_ADDR, ACC_CTRL4, reg4);
-	
-	return true;
+	AxesRaw_t Axes;
+	readContinous(LSM303_MAG, MAG_OUTX_L, (uint8_t*)&Axes, 6);
+	return Axes;
 }
 
-AxesRaw_t mag_read()
+int16_t lsm303_readTemp()
 {
-	AxesRaw_t retval;	/* Return value, all three axis */
-	uint8_t dataHigh;	/* For collecting the MSB of an axis */
-	uint8_t dataLow;	/* For collecting the LSB of an axis */
-	
-	dataLow  = readReg(MAG_I2C_ADDR, MAG_OUTX_L);
-	dataHigh = readReg(MAG_I2C_ADDR, MAG_OUTX_H);
-	retval.xAxis = (int16_t)(dataLow | (dataHigh << 8));
-		
-	dataLow  = readReg(MAG_I2C_ADDR, MAG_OUTY_L);
-	dataHigh = readReg(MAG_I2C_ADDR, MAG_OUTY_H);
-	retval.yAxis = (int16_t)(dataLow | (dataHigh << 8));
-		
-	dataLow  = readReg(MAG_I2C_ADDR, MAG_OUTZ_L);
-	dataHigh = readReg(MAG_I2C_ADDR, MAG_OUTZ_L);
-	retval.zAxis = (int16_t)(dataLow | (dataHigh << 8));
-		
-	return retval;
+	int16_t temperature;
+	readContinous(LSM303_MAG, MAG_TEMP_OUT_L, (uint8_t*)&temperature, 2);
+	return temperature;
 }
 
-int16_t imu_readTemp()
+float lsm303_getGravity(const int16_t AXIS)
 {
-	uint8_t dataHigh;	/* For collecting the MSB of an axis */
-	uint8_t dataLow;	/* For collecting the LSB of an axis */
+	float scale;
 	
-	dataLow  = readReg(MAG_I2C_ADDR, MAG_TEMP_OUT_L);
-	dataHigh = readReg(MAG_I2C_ADDR, MAG_TEMP_OUT_H);
+	switch(currentScale) {
+		case ACC_FS_2G: scale = 0.061;
+						break;
+		case ACC_FS_4G: scale = 0.122;
+						break;
+		case ACC_FS_8G: scale = 0.244;
+						break;
+		default: scale = 0.0;
+	};
 	
->>>>>>> a53441ff19ab7f1ae13ffb9165ee67950600756f
-	return ((dataHigh << 8) | dataLow );
+	return (AXIS * scale / 1000.0);
+}
+
+float lsm303_getGauss(const int16_t AXIS)
+{
+	return (AXIS * 0.58 / 1000.0);
 }

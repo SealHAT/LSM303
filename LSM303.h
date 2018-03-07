@@ -4,7 +4,7 @@
  * Created: 2/23/2018 2:58:51 PM
  *  Author: hpan5
  */ 
-#include "LSM303CTypes.h"
+
 
 #ifndef LSM303_H_
 #define LSM303_H_
@@ -12,113 +12,134 @@
 #include <atmel_start.h>	/* where the IO functions live */
 #include <stdint.h>
 #include <stdbool.h>
-<<<<<<< HEAD
-#include <stdio.h>
-#include <stdlib.h>
-=======
->>>>>>> a53441ff19ab7f1ae13ffb9165ee67950600756f
+#include "LSM303CTypes.h"
 
+/* Structure to store and return 3-axis measurements */
 typedef struct {
 	int16_t xAxis;
 	int16_t yAxis;
 	int16_t zAxis;
 } AxesRaw_t;
 
-/** @brief Initializes the LSM303C IMU
- *
- * This function stores the port structure to use for communication with
- * the IMU and initializes it to synchronous mode.
- *
- * @param WIRE [IN] th i2c synchronous structure to use for communication.
- * @return True if successful, false if not. Any error is likely due to I2C
- */
-bool imu_init(struct i2c_m_sync_desc *const WIRE);
+/* Status return values from all IMU sensors */
+typedef enum {
+	NULL_STATUS				= 0x00,
+	X_NEW_DATA_AVAILABLE    = 0x01,
+	Y_NEW_DATA_AVAILABLE    = 0x02,
+	Z_NEW_DATA_AVAILABLE    = 0x04,
+	ZYX_NEW_DATA_AVAILABLE  = 0x08,
+	X_OVERRUN               = 0x10,
+	Y_OVERRUN               = 0x20,
+	Z_OVERRUN               = 0x40,
+	ZYX_OVERRUN             = 0x80
+} IMU_STATUS_t;
 
-/** @brief Runs the self test on the accelerometer
+/** @brief initialize the lsm303 IMU sensor without starting it
  *
- * @return The results of the test
+ * @param WIRE [IN] The I2C descriptor to use for the device
+ * @return true if successful, false if hardware allocation fails
  */
-int32_t acc_SelfTest();
+bool lsm303_init(struct i2c_m_sync_desc *const WIRE);
 
-/** @brief Configure the operation of the Accelerometer
+/** @brief Set the rate and range of the accelerometer
  *
- * @param RANGE [IN] Full scale range option for the accelerometer
- * @param BLOCK_UPDATE [IN] option to limit updates until the last value is fully read
- * @param AXIS [IN] enable or disable the individual axis, logical OR of axis desired or 0x00 to disable accelerometer
- * @param RATE [IN] The update rate of the accelerometer
- * @return TRUE if the configuration is successful
+ * This function sets the rate and range of the accelerometer. The Rate
+ * can be any of the pre-defined rates in ACC_ODR_t, including the ACC_ODR_POWER_DOWN
+ * state. This is how the accelerometer is turned on and off manually. Once sampling the
+ * readings will be ready to read, either by setting up the interrupts with the appropriate
+ * functions or by polling the status register.
+ *
+ * @param RANGE [IN] the full scale range of the accelerometer
+ * @param RATE [IN] the sample rate of the accelerometer
+ * @return true if successful, false if registers are not set correctly
  */
-<<<<<<< HEAD
-bool acc_config(const ACC_FS_t RANGE, const ACC_BDU_t BLOCK_UPDATE, const uint8_t AXIS, const ACC_ODR_t RATE);
-=======
-bool acc_config(const ACC_FS_t RANGE, const ACC_BDU_t BLOCK_UPDATE, const uint8_t AXIS, const ACC_ODR_t RATE, const ACC_IF_ADD_INC_t INCREMENT);
->>>>>>> a53441ff19ab7f1ae13ffb9165ee67950600756f
+bool lsm303_startAcc(const ACC_FS_t RANGE, const ACC_ODR_t RATE);
 
-/** @brief Configure the operation of the Accelerometer
+/** @brief set the rate and enable the magnetometer
  *
- * Gets the status of the accelerometer - Flags set for new data and data overruns
+ * This function enables the magnetometer at the specified rate. The internal
+ * temperature sensor can also be enabled to help compensate readings.
+ * The MODE setting can either one of three modes: 
+ *     - MAG_MODE_OFF: disables the magnetometer
+ *     - MAG_MODE_SINGLE: Performs a single reading and then automatically returns the mode to the OFF state
+ *                        and indicates the data ready state on the DRDY pin.
+ *     - MAG_MODE_CONTINUOUS: Continuously reads at the specified ODR rate. The magnetometer has no FIFO.
  *
- * @return the status of the accelerometer as a ACC_STATUS_FLAGS_t type
+ * @param MODE [IN] The mode of the sensor, as described above.
+ * @param RATE [IN] The rate to sample the sensor, a predefined rate from MAG_DO_t
+ * @param TEMPERATURE [IN] Enable or Disable the internal temperature sensor
+ * @return
  */
-ACC_STATUS_FLAGS_t acc_getStatus();
+bool lsm303_startMag(const MAG_MODE_t MODE, const MAG_DO_t RATE, const MAG_TEMP_EN_t TEMPERATURE);
 
-/** @brief reads a value from the accelerometer
+/** @brief Get the status of the accelerometer
  *
- * This function reads a value from the accelerometer and returns the
- * three axis values as a struct. The values are signed 16-bit integers.
+ * The Sensor status enum defined several flags. It can indicate a data overflow for
+ * both individual axis as well as all three axis combined. If neither condition is true
+ * the NULL_STATUS value is returned.
  *
- * @return A struct of the three axis values, each value is a signed 16-bit integer
+ * @return the IMU_STATUS_t flags enumeration
  */
-AxesRaw_t acc_read();
+IMU_STATUS_t lsm303_statusAcc();
 
-/** @brief Configure the operation of the magnetometer
+/** @brief Get the status of the magnetometer
  *
- * @param RATE [IN] The update rate of the magnetometer
- * @param SCALE [IN] Full scale range option for the magnetometer
- * @param BLOCK_UPDATE [IN] option to limit updates until the last value is fully read
- * @param PWR_MODE [IN] Operation mode of the x/y axis (power mode)
- * @param PERFORMANCE [IN] Operation mode of the z axis (power mode)
- * @param CONV_MODE [IN] conversion operation mode - continuous, single conversion, or power-down
- * @return TRUE if the configuration is successful
+ * The Sensor status enum defined several flags. It can indicate a data overflow for
+ * both individual axis as well as all three axis combined. If neither condition is true
+ * the NULL_STATUS value is returned.
+ *
+ * @return the IMU_STATUS_t flags enumeration
  */
-<<<<<<< HEAD
-bool mag_config(const MAG_DO_t RATE, const MAG_FS_t SCALE, const MAG_BDU_t BLOCK_UPDATE, const MAG_OMXY_t PWR_MODE, const MAG_OMZ_t PERFORMANCE, const MAG_MD_t CONV_MODE);
-=======
-bool mag_config(const MAG_DO_t RATE, const MAG_FS_t SCALE, const MAG_BDU_t BLOCK_UPDATE, const MAG_OMXY_t OMXY, const MAG_OMZ_t OMZ, const MAG_MD_t CONV_MODE);
->>>>>>> a53441ff19ab7f1ae13ffb9165ee67950600756f
+IMU_STATUS_t lsm303_statusMag();
 
-/** @brief Runs the self test on the magnetometer
+/** @brief obtains a three-axis accelerometer reading
  *
- * @return The results of the test
+ * Readings obtained from this function are "raw" and must be transformed into
+ * floating point values if actual gravity readings are desired. This can be done
+ * with the lsm303_getGravity() function.
+ *
+ * @return the three axis of the accelerometer as the AxesRaw_t struct
  */
-int32_t mag_SelfTest();
+AxesRaw_t lsm303_readAcc();
 
-/** @brief reads a value from the magnetometer
+/** @brief obtains a three-axis magnetometer reading
  *
- * This function reads a value from the accelerometer and returns the
- * three axis values as a struct. The values are signed 16-bit integers.
+ * Readings obtained from this function are "raw" and must be transformed into
+ * floating point values if actual gauss readings are desired. This can be done
+ * with the lsm303_getGauss() function.
  *
- * @return A struct of the three axis values, each value is a signed 16-bit integer
+ * @return the three axis of the magnetometer as the AxesRaw_t struct.
  */
-AxesRaw_t mag_read();
+AxesRaw_t lsm303_readMag();
 
-/** @brief gets the temperature of the IMU sensor
+/** @brief obtains the internal temperature of the magnetometer
  *
- * This function reads the internal temperature of the IMU for
- * calibrating the readings.
+ * The temperature has 8 digits per degree C, and is 0 at 25C
+ * Therefore C = (reading/8)+25
  *
- * @return the temperature reading as a signed 16-bit integer
+ * @return the temperature as a signed 16-bit integer.
  */
-int16_t imu_readTemp();
+int16_t lsm303_readTemp();
 
-/** @brief The IMU temperature sensor value in Celsius
+/** @brief transform raw accelerometer readings into Gs
  *
- * @return The IMU internal temperature in Celsius
+ * @param AXIS [IN] The reading to convert
+ * @return The given axis in Gs, floating point
  */
-<<<<<<< HEAD
-inline float imu_tempInC(const int16_t RAW_TEMP) { return (RAW_TEMP / 8) + 25 ;}
-=======
-inline float imu_tempInC(const int16_t RAW_TEMP) { return (RAW_TEMP / 8) + 25 }
->>>>>>> a53441ff19ab7f1ae13ffb9165ee67950600756f
+float lsm303_getGravity(const int16_t AXIS);
+
+/** @brief transform raw magnetometer readings into Gauss
+ *
+ * @param AXIS [IN] The reading to convert
+ * @return The given axis in Gauss, floating point
+ */
+float lsm303_getGauss(const int16_t AXIS);
+
+/** @brief transform raw temperature readings into Gauss
+ *
+ * @param TEMP [IN] the reading to convert
+ * @return The temperature in Celcius, as a flaoting point value
+ */
+inline float lsm303_getCelcius(const int16_t TEMP) { return (TEMP / 8.0) + 25.0;  }
 
 #endif /* LSM303_H_ */
