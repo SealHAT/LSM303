@@ -25,6 +25,12 @@ typedef struct {
 	int16_t zAxis;
 } AxesRaw_t;
 
+typedef struct {
+	float xAxis;
+	float yAxis;
+	float zAxis;
+} AxesSI_t;
+
 /* Status return values from all IMU sensors */
 typedef enum {
 	NULL_STATUS				= 0x00,
@@ -128,16 +134,16 @@ int16_t lsm303_readTemp();
 /** @brief transform raw accelerometer readings into Gs
  *
  * @param AXIS [IN] The reading to convert
- * @return The given axis in Gs, floating point
+ * @return The axis x y and z in SI unit (gravity)
  */
-float lsm303_getGravity(const int16_t AXIS);
+AxesSI_t lsm303_getGravity();
 
 /** @brief transform raw magnetometer readings into Gauss
  *
  * @param AXIS [IN] The reading to convert
- * @return The given axis in Gauss, floating point
+ * @return The axis x y and z in SI unit (Gauss)
  */
-float lsm303_getGauss(const int16_t AXIS);
+AxesSI_t lsm303_getGauss();
 
 /** @brief transform raw temperature readings into Gauss
  *
