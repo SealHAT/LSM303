@@ -9,7 +9,7 @@
 int main(void)
 {
 	char  output[STRING_SIZE];		/* A string used for output on USB */
-	AxesRaw_t xcel;					/* Accelerometer reading */
+	AxesSI_t xcel;					/* Accelerometer reading */
 	AxesRaw_t mag;					/* Magnetometer reading */
 	int16_t   temp;					/* Magnetometer temperature */
 	IMU_STATUS_t newAcc, newMag;	/* Indicate a new sample */
@@ -26,15 +26,15 @@ int main(void)
 		/* Read and print the Accelerometer if it is ready */
 		newAcc = lsm303_statusAcc();
 		if(newAcc != NULL_STATUS) {
-			xcel  = lsm303_readAcc();
+			xcel  = lsm303_getGravity();
 			
 			/* Print the data if USB is available */
 			if(usb_dtr()) {
-				printFloat(lsm303_getGravity(xcel.xAxis), 3);
+				printFloat(xcel.xAxis, 3);
 				usb_put(',');
-				printFloat(lsm303_getGravity(xcel.yAxis), 3);
+				printFloat(xcel.yAxis, 3);
 				usb_put(',');
-				printFloat(lsm303_getGravity(xcel.zAxis), 3);
+				printFloat(xcel.zAxis, 3);
 				usb_put('\n');
 			}
 		}

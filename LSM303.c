@@ -176,7 +176,7 @@ int16_t lsm303_readTemp()
 	return temperature;
 }
 
-float lsm303_getGravity()
+AxesSI_t lsm303_getGravity()
 {
 	float scale;
 	AxesSI_t  results;
@@ -199,7 +199,7 @@ float lsm303_getGravity()
 	return results;
 }
 
-float lsm303_getGauss()
+AxesSI_t lsm303_getGauss()
 {
 	AxesSI_t  results;
 	AxesRaw_t mag = lsm303_readMag();
