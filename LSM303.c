@@ -176,9 +176,11 @@ int16_t lsm303_readTemp()
 	return temperature;
 }
 
-float lsm303_getGravity(const int16_t AXIS)
+float lsm303_getGravity()
 {
 	float scale;
+	AxesSI_t  results;
+	AxesRaw_t accel = lsm303_readAcc();
 	
 	switch(currentScale) {
 		case ACC_FS_2G: scale = 0.061;
@@ -190,10 +192,21 @@ float lsm303_getGravity(const int16_t AXIS)
 		default: scale = 0.0;
 	};
 	
-	return (AXIS * scale / 1000.0);
+	results.xAxis = ( accel.xAxis * scale / 1000.0);
+	results.yAxis = ( accel.yAxis * scale / 1000.0);
+	results.zAxis = ( accel.zAxis * scale / 1000.0);
+	
+	return results;
 }
 
-float lsm303_getGauss(const int16_t AXIS)
+float lsm303_getGauss()
 {
-	return (AXIS * 0.58 / 1000.0);
+	AxesSI_t  results;
+	AxesRaw_t mag = lsm303_readMag();
+	
+	results.xAxis = (mag.xAxis * 0.58 / 1000.0);
+	results.yAxis = (mag.yAxis * 0.58 / 1000.0);
+	results.zAxis = (mag.zAxis * 0.58 / 1000.0);
+	
+	return results;
 }

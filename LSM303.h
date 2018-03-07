@@ -14,12 +14,22 @@
 #include <stdbool.h>
 #include "LSM303CTypes.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 /* Structure to store and return 3-axis measurements */
 typedef struct {
 	int16_t xAxis;
 	int16_t yAxis;
 	int16_t zAxis;
 } AxesRaw_t;
+
+typedef struct {
+	float xAxis;
+	float yAxis;
+	float zAxis;
+} AxesSI_t;
 
 /* Status return values from all IMU sensors */
 typedef enum {
@@ -124,16 +134,16 @@ int16_t lsm303_readTemp();
 /** @brief transform raw accelerometer readings into Gs
  *
  * @param AXIS [IN] The reading to convert
- * @return The given axis in Gs, floating point
+ * @return The axis x y and z in SI unit (gravity)
  */
-float lsm303_getGravity(const int16_t AXIS);
+AxesSI_t lsm303_getGravity();
 
 /** @brief transform raw magnetometer readings into Gauss
  *
  * @param AXIS [IN] The reading to convert
- * @return The given axis in Gauss, floating point
+ * @return The axis x y and z in SI unit (Gauss)
  */
-float lsm303_getGauss(const int16_t AXIS);
+AxesSI_t lsm303_getGauss();
 
 /** @brief transform raw temperature readings into Gauss
  *
@@ -141,5 +151,9 @@ float lsm303_getGauss(const int16_t AXIS);
  * @return The temperature in Celcius, as a flaoting point value
  */
 inline float lsm303_getCelcius(const int16_t TEMP) { return (TEMP / 8.0) + 25.0;  }
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #endif /* LSM303_H_ */
