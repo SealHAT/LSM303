@@ -74,6 +74,7 @@
 
 #User Specific Files
 *.atsuo
+jlink.config
 
 ############
 ## Windows

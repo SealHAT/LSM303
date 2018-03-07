@@ -1,13 +1,10 @@
 #include <atmel_start.h>
 #include <stdio.h>
 #include "LSM303.h"
-#include "math.h"
+#include "SerialPrint.h"
 #include "usb_start.h"
 
 #define STRING_SIZE (64)
-
-// float printing function ported from arduino
-size_t printFloat(double number, uint8_t digits);
 
 int main(void)
 {
@@ -16,7 +13,6 @@ int main(void)
 	AxesRaw_t mag;					/* Magnetometer reading */
 	int16_t   temp;					/* Magnetometer temperature */
 	IMU_STATUS_t newAcc, newMag;	/* Indicate a new sample */
-	float x, y, z;
 	
 	atmel_start_init();
 	lsm303_init(&wire);
@@ -32,14 +28,14 @@ int main(void)
 		if(newAcc != NULL_STATUS) {
 			xcel  = lsm303_readAcc();
 			
-			x = lsm303_getGravity(xcel.xAxis);
-			y = lsm303_getGravity(xcel.yAxis);
-			z = lsm303_getGravity(xcel.zAxis);
-			
 			/* Print the data if USB is available */
 			if(usb_dtr()) {
-				snprintf(output, STRING_SIZE, "%d.%d,%d.%d,%d.%d\n", (int)x, decPart(x), (int)y, decPart(y), (int)z, decPart(z));
-				usb_send_buffer((uint8_t*)output, strlen(output));
+				printFloat(lsm303_getGravity(xcel.xAxis), 3);
+				usb_put(',');
+				printFloat(lsm303_getGravity(xcel.yAxis), 3);
+				usb_put(',');
+				printFloat(lsm303_getGravity(xcel.zAxis), 3);
+				usb_put('\n');
 			}
 		}
 		
@@ -56,59 +52,4 @@ int main(void)
 //			}
 //		}
 	}
-}
-
-size_t printFloat(double number, uint8_t digits)
-{
-	static const int OUTPUT_SIZE = 12;
-	char output[OUTPUT_SIZE];
-	size_t n = 0;
-
-	if (isnan(number)) {
-		snprintf(output, OUTPUT_SIZE, "nan");
-	}	
-	else if (isinf(number)) {
-		snprintf(output, OUTPUT_SIZE, "inf");
-	}
-	else if (number > 4294967040.0) {
-		snprintf(output, OUTPUT_SIZE, "ovf");  // constant determined empirically
-	}
-	else if (number <-4294967040.0) {
-		snprintf(output, OUTPUT_SIZE, "ovf");  // constant determined empirically
-	}
-	else {
-		// Handle negative numbers
-		if (number < 0.0) {
-			output[n++] = '-';
-			number = -number;
-		}
-
-		// Round correctly so that print(1.999, 2) prints as "2.00"
-		double rounding = 0.5;
-		for (uint8_t i = 0; i < digits; i++) {
-			rounding /= 10.0;
-		}
-
-		number += rounding;
-
-		// Extract the integer part of the number and print it
-		unsigned long int_part = (unsigned long)number;
-		double remainder = number - (double)int_part;
-		n += print(int_part);
-
-		// Print the decimal point, but only if there are digits beyond
-		if (digits > 0) {
-			n += print(".");
-		}
-
-		// Extract digits from the remainder one at a time
-		while (digits-- > 0)
-		{
-			remainder *= 10.0;
-			unsigned int toPrint = (unsigned int)remainder;
-			n += print(toPrint);
-			remainder -= toPrint;
-		}
-	}
-	return n;
 }

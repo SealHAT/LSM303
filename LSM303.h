@@ -14,6 +14,10 @@
 #include <stdbool.h>
 #include "LSM303CTypes.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 /* Structure to store and return 3-axis measurements */
 typedef struct {
 	int16_t xAxis;
@@ -141,5 +145,9 @@ float lsm303_getGauss(const int16_t AXIS);
  * @return The temperature in Celcius, as a flaoting point value
  */
 inline float lsm303_getCelcius(const int16_t TEMP) { return (TEMP / 8.0) + 25.0;  }
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #endif /* LSM303_H_ */
