@@ -892,6 +892,12 @@
     <Compile Include="ringbuff\ringbuffer.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="SerialPrint.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="SerialPrint.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="usb\class\cdc\device\cdcdf_acm.c">
       <SubType>compile</SubType>
     </Compile>
