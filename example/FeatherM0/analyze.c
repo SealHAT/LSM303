@@ -9,13 +9,13 @@
 float pitch_est(AxesSI_t Axes){
 	float pitch;
 	/*Apply trigonometry to get the pic*/
-	pitch = (atan(Axes.xAxis/sqrt(pow(Axes.yAxis,2)+pow(Axes.zAxis,2))))*(180.0/PI);
+	pitch = (atan(Axes.yAxis/sqrt(pow(Axes.zAxis,2)+pow(Axes.xAxis,2))))*(180.0/PI);
 	return pitch;
 }
 
 float row_est(AxesSI_t Axes){
 	float roll;
 	/*Apply trigonometry to get the pic*/
-	roll = (atan(Axes.xAxis/sqrt(pow(Axes.xAxis,2)+pow(Axes.zAxis,2))))*(180.0/PI);
+	roll = (atan(-Axes.xAxis/Axes.zAxis))*(180.0/PI);
 	return roll;
 }
