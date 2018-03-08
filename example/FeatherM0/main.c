@@ -1,6 +1,7 @@
 #include <atmel_start.h>
 #include <stdio.h>
 #include "LSM303.h"
+#include "analyze.h"
 #include "SerialPrint.h"
 #include "usb_start.h"
 
@@ -13,6 +14,7 @@ int main(void)
 	AxesRaw_t mag;					/* Magnetometer reading */
 	int16_t   temp;					/* Magnetometer temperature */
 	IMU_STATUS_t newAcc, newMag;	/* Indicate a new sample */
+	float pitch, row;
 	
 	atmel_start_init();
 	lsm303_init(&wire);
@@ -27,7 +29,8 @@ int main(void)
 		newAcc = lsm303_statusAcc();
 		if(newAcc != NULL_STATUS) {
 			xcel  = lsm303_getGravity();
-			
+			pitch = pitch_est(xcel);
+			row = row_est(xcel);
 			/* Print the data if USB is available */
 			if(usb_dtr()) {
 				printFloat(xcel.xAxis, 3);
@@ -35,6 +38,10 @@ int main(void)
 				printFloat(xcel.yAxis, 3);
 				usb_put(',');
 				printFloat(xcel.zAxis, 3);
+				usb_put(',');
+				printFloat(pitch, 3);
+				usb_put(',');
+				printFloat(row, 3);
 				usb_put('\n');
 			}
 		}

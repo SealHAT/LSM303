@@ -12,6 +12,8 @@
 #include <atmel_start.h>	/* where the IO functions live */
 #include <stdint.h>
 #include <stdbool.h>
+#include "math.h"
+
 #include "LSM303CTypes.h"
 
 #ifdef __cplusplus
