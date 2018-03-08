@@ -24,6 +24,8 @@ float pitch_est(AxesSI_t Axes);
  */
 float roll_est(AxesSI_t Axes);
 
+//float yaw_est(AxesSI_t Axes);
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus

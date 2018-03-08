@@ -19,3 +19,10 @@ float roll_est(AxesSI_t Axes){
 	roll = (atan(-Axes.xAxis/Axes.zAxis))*(180.0/PI);
 	return roll;
 }
+/*
+float yaw_est(AxesSI_t Axes){
+	float yaw;
+	yaw = (atan(Axes.zAxis/sqrt(pow(Axes.xAxis,2)+pow(Axes.yAxis,2))))*(180.0/PI);
+	return yaw;
+}
+*/
