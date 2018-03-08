@@ -14,7 +14,7 @@ int main(void)
 	AxesRaw_t mag;					/* Magnetometer reading */
 	int16_t   temp;					/* Magnetometer temperature */
 	IMU_STATUS_t newAcc, newMag;	/* Indicate a new sample */
-	float pitch, row;
+	float pitch, roll;
 	
 	atmel_start_init();
 	lsm303_init(&wire);
@@ -30,7 +30,7 @@ int main(void)
 		if(newAcc != NULL_STATUS) {
 			xcel  = lsm303_getGravity();
 			pitch = pitch_est(xcel);
-			row = row_est(xcel);
+			roll  = roll_est(xcel);
 			/* Print the data if USB is available */
 			if(usb_dtr()) {
 				printFloat(xcel.xAxis, 3);
@@ -41,7 +41,7 @@ int main(void)
 				usb_put(',');
 				printFloat(pitch, 3);
 				usb_put(',');
-				printFloat(row, 3);
+				printFloat(roll, 3);
 				usb_put('\n');
 			}
 		}

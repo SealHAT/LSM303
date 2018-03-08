@@ -13,7 +13,7 @@ float pitch_est(AxesSI_t Axes){
 	return pitch;
 }
 
-float row_est(AxesSI_t Axes){
+float roll_est(AxesSI_t Axes){
 	float roll;
 	/*Apply trigonometry to get the pic*/
 	roll = (atan(-Axes.xAxis/Axes.zAxis))*(180.0/PI);

@@ -10,7 +10,22 @@
 #ifndef ANALYZE_H_
 #define ANALYZE_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
+/**
+ *
+ */
 float pitch_est(AxesSI_t Axes);
-float row_est(AxesSI_t Axes);
+
+/**
+ *
+ */
+float roll_est(AxesSI_t Axes);
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #endif /* ANALYZE_H_ */
