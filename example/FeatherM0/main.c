@@ -18,16 +18,16 @@ int main(void)
 	
 	atmel_start_init();
 	lsm303_init(&wire);
-	lsm303_startAcc(ACC_FS_2G, ACC_ODR_200_Hz);
+	lsm303_startAcc(ACC_FS_2G, ACC_ODR_50_Hz);
 	
 	for(;;) {
-		/* Turn on LED if the DTR signal is set (serial terminal open on host) */
-		gpio_set_pin_level(LED_BUILTIN, usb_dtr());
 
 		/* Read and print the Accelerometer if it is ready */
 		newAcc = lsm303_statusAcc();
 		if(newAcc != NULL_STATUS) {
+            gpio_set_pin_level(LED_BUILTIN, true);
             xcel  = lsm303_getGravity();
+            gpio_set_pin_level(LED_BUILTIN, false);
 			/* Print the data if USB is available */
 			if(usb_dtr()) {
 				err = printAxis(&xcel);
@@ -37,6 +37,7 @@ int main(void)
                 } // USB ERROR
 			} // USB DTR ON
 		} // NEW ACCEL
+
 	} // FOREVER
 }
 
