@@ -18,8 +18,7 @@ int main(void)
 	
 	atmel_start_init();
 	lsm303_init(&wire);
-	lsm303_startAcc(ACC_FS_2G, ACC_ODR_50_Hz);
-//	lsm303_startMag(MAG_MODE_CONTINUOUS, MAG_DO_40_Hz, MAG_TEMP_ENABLE);
+	lsm303_startAcc(ACC_FS_2G, ACC_ODR_200_Hz);
 	
 	for(;;) {
 		/* Turn on LED if the DTR signal is set (serial terminal open on host) */
@@ -28,7 +27,7 @@ int main(void)
 		/* Read and print the Accelerometer if it is ready */
 		newAcc = lsm303_statusAcc();
 		if(newAcc != NULL_STATUS) {
-			xcel  = lsm303_getGravity();
+            xcel  = lsm303_getGravity();
 			/* Print the data if USB is available */
 			if(usb_dtr()) {
 				err = printAxis(&xcel);
@@ -105,15 +104,14 @@ static int ftostr(double number, uint8_t digits, char* buff, const int LEN) {
 }
 
 int32_t printAxis(AxesSI_t* reading) {
-    static const int OUTPUT_SIZE = 64;
-    char output[OUTPUT_SIZE];
+    static char output[STRING_SIZE];
     int n = 0;
 
-    n += ftostr(reading->xAxis, 2, output, OUTPUT_SIZE - n);
+    n += ftostr(reading->xAxis, 3, &output[n], STRING_SIZE - n);
     output[n++] = ',';
-    n += ftostr(reading->yAxis, 2, output, OUTPUT_SIZE - n);
+    n += ftostr(reading->yAxis, 3, &output[n], STRING_SIZE - n);
     output[n++] = ',';
-    n += ftostr(reading->zAxis, 2, output, OUTPUT_SIZE - n);   
-
+    n += ftostr(reading->zAxis, 3, &output[n], STRING_SIZE - n);   
+    output[n++] = '\n';
     return usb_write(output, n);
 }
