@@ -63,6 +63,5 @@ size_t printFloat(double number, uint8_t digits)
 		}
 	}
 	
-	usb_send_buffer((uint8_t*)output, n);
-	return n;
+	return usb_write((uint8_t*)output, n);
 }
