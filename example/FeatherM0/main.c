@@ -11,15 +11,15 @@ int32_t printAxis(AxesSI_t* reading);
 int main(void)
 {
 	AxesSI_t xcel;					/* Accelerometer reading */
-	AxesRaw_t mag;					/* Magnetometer reading */
-	int16_t   temp;					/* Magnetometer temperature */
+	AxesSI_t mag;					/* Magnetometer reading */
+	//int16_t   temp;					/* Magnetometer temperature */
 	IMU_STATUS_t newAcc, newMag;	/* Indicate a new sample */
     int32_t err;
 	
 	atmel_start_init();
 	lsm303_init(&wire);
 	lsm303_startAcc(ACC_FS_2G, ACC_ODR_50_Hz);
-	
+	lsm303_startMag(MAG_MODE_CONTINUOUS, MAG_DO_40_Hz, MAG_TEMP_ENABLE);
 	for(;;) {
 
 		/* Read and print the Accelerometer if it is ready */
@@ -37,7 +37,23 @@ int main(void)
                 } // USB ERROR
 			} // USB DTR ON
 		} // NEW ACCEL
-
+	
+// 	/* Read and print the Magnetometer if it is ready */
+// 	newMag = lsm303_statusMag();
+// 	if(newMag != NULL_STATUS) {
+// 		gpio_set_pin_level(LED_BUILTIN, true);
+// 		mag  = lsm303_getGauss();
+// 		gpio_set_pin_level(LED_BUILTIN, false);
+// 		/* Print the data if USB is available */
+// 		if(usb_dtr()) {
+// 			err = printAxis(&mag);
+// 			if(err < 0) {
+// 				delay_ms(1);
+// 				usb_write("ERROR!\n", 7);
+// 			} // USB ERROR
+// 		} // USB DTR ON
+// 	} // NEW MAG
+	
 	} // FOREVER
 }
 
