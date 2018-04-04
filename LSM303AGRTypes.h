@@ -343,141 +343,115 @@ typedef enum {
 /***********************************************/
 typedef enum {
     // 40 - 44 Reserved
-    MAG_OFFSET_X_LO = 0x45,
-    MAG_OFFSET_X_HI = 0x46,
-    MAG_OFFSET_Y_LO = 0x47,
-    MAG_OFFSET_Y_HI = 0x48,
-    MAG_OFFSET_Z_LO = 0x49,
-    MAG_OFFSET_Z_HI = 0x4A,
+    MAG_OFFSET_X_LO         = 0x45,
+    MAG_OFFSET_X_HI         = 0x46,
+    MAG_OFFSET_Y_LO         = 0x47,
+    MAG_OFFSET_Y_HI         = 0x48,
+    MAG_OFFSET_Z_LO         = 0x49,
+    MAG_OFFSET_Z_HI         = 0x4A,
     // 4B - 4C Reserved
-	MAG_WHO_AM_I    = 0x4F,
+	MAG_WHO_AM_I            = 0x4F,
     // 50 - 5F Reserved
-	MAG_CFG_A	    = 0x60,
-    MAG_CFG_B	    = 0x61,
-    MAG_CFG_C	    = 0x62,
-    MAG_INT_CTRL    = 0x63,
-    MAG_INT_SRC     = 0x64,
-    MAG_INT_THR_L   = 0x65,
-    MAG_INT_THR_H   = 0x66,
-    MAG_STATUS_REG  = 0x67,
-    MAG_OUTX_L      = 0x68,
-    MAG_OUTX_H      = 0x69,
-    MAG_OUTY_L      = 0x6A,
-    MAG_OUTY_H      = 0x6B,
-    MAG_OUTZ_L      = 0x6C,
-    MAG_OUTZ_H      = 0x6D,
+	MAG_CFG_A	            = 0x60,
+    MAG_CFG_B	            = 0x61,
+    MAG_CFG_C	            = 0x62,
+    MAG_INT_CTRL            = 0x63,
+    MAG_INT_SRC             = 0x64,
+    MAG_INT_THR_L           = 0x65,
+    MAG_INT_THR_H           = 0x66,
+    MAG_STATUS_REG          = 0x67,
+    MAG_OUTX_L              = 0x68,
+    MAG_OUTX_H              = 0x69,
+    MAG_OUTY_L              = 0x6A,
+    MAG_OUTY_H              = 0x6B,
+    MAG_OUTZ_L              = 0x6C,
+    MAG_OUTZ_H              = 0x6D,
     // 6E - 6F Reserved
 } MAG_REG_t;
 
 /*****************************************/
-/*** MAGNETOMETER CONTROL REGISTER #1  ***/
+/*** MAGNETOMETER CONTROL REGISTER A   ***/
 /*****************************************/
 typedef enum {
-	MAG_CTRL1_TEMP			= 0x80,
-	MAG_CTRL1_OMXY			= 0x60,
-	MAG_CTRL1_DO			= 0x1C,
-	MAG_CTRL1_SELFTEST		= 0x01
-} MAG_CTRL1_MASKS_t;
+	MAG_CFGA_TEMPCOMP       = 0x80,     // for proper operation this should be set
+    MAG_CFGA_REBOOT         = 0x40,
+    MAG_CFGA_SOFTRST        = 0x20,
+    MAG_CFGA_LP             = 0x10,
+    MAG_CFGA_ODR            = 0x0C,
+    MAG_CFGA_MD             = 0x03,
+} MAG_CFGA_MASKS_t;
 
 typedef enum {
-	MAG_TEMP_DISABLE = 0x00,
-	MAG_TEMP_ENABLE  = 0x80
-} MAG_TEMP_EN_t;
+	MAG_TEMPCOMP_DISABLE    = 0x00,
+	MAG_TEMPCOMP_ENABLE     = 0x80
+} MAG_TEMPCOMP_t;
 
 typedef enum {
-	MAG_SELFTEST_OFF	= 0x00,
-	MAG_SELFTEST_ON		= 0x01
-} MAG_SELF_TEST_t;
+	MAG_ODR_10_HZ            = 0x00,
+    MAG_ODR_20_HZ            = 0x04,
+    MAG_ODR_50_HZ            = 0x08,
+    MAG_ODR_100_HZ           = 0x0C
+} MAG_ODR_t;
 
 typedef enum {
-	MAG_OMXY_LOW_POWER              = 0x00,
-	MAG_OMXY_MEDIUM_PERFORMANCE     = 0x20,
-	MAG_OMXY_HIGH_PERFORMANCE       = 0x40,
-	MAG_OMXY_ULTRA_HIGH_PERFORMANCE = 0x60
-} MAG_OMXY_t;
-
-typedef enum {
-	MAG_DO_0_625_Hz = 0x00,
-	MAG_DO_1_25_Hz  = 0x04,
-	MAG_DO_2_5_Hz   = 0x08,
-	MAG_DO_5_Hz     = 0x0C,
-	MAG_DO_10_Hz    = 0x10,
-	MAG_DO_20_Hz    = 0x14,
-	MAG_DO_40_Hz    = 0x18,
-	MAG_DO_80_Hz    = 0x1C
-} MAG_DO_t;
-
-/*****************************************/
-/*** MAGNETOMETER CONTROL REGISTER #2  ***/
-/*****************************************/
-typedef enum {
-	MAG_FS_16_Ga  =  0x60
-} MAG_FS_t;
-
-typedef enum {
-	MAG_RESET_OFF		= 0x00,
-	MAG_REBOOT			= 0x08,
-	MAG_SOFT_RST		= 0x04
-} MAG_RESET_t;
-
-/*****************************************/
-/*** MAGNETOMETER CONTROL REGISTER #3  ***/
-/*****************************************/
-typedef enum {
-	MAG_CTRL3_I2C			= 0x80,
-	MAG_CTRL3_LOWPOWER		= 0x20,
-	MAG_CTRL3_SPI			= 0x04,
-	MAG_CTRL3_MODE			= 0x03
-} MAG_CTRL3_MASKS_t;
-
-typedef enum {
-	MAG_I2C_ON		= 0x00,
-	MAG_I2C_OFF		= 0x80
-} MAG_I2C_t;
-
-typedef enum {
-	MAG_LOWPOWER_OFF = 0x00,
-	MAG_LOWPOWER_ON	 = 0x20
-} MAG_LOWPOWER_t;
-
-typedef enum {
-	MAG_SPI_OFF		= 0x00,
-	MAG_SPI_ON		= 0x04
-} MAG_SPI_t;
-
-typedef enum {
-	MAG_MODE_CONTINUOUS   = 0x00,
-	MAG_MODE_SINGLE       = 0x01,
-	MAG_MODE_OFF		  = 0x03
+    MAG_MODE_CONTINUOUS     = 0x00,
+    MAG_MODE_SINGLE         = 0x01,
+    MAG_MODE_IDLE		    = 0x03
 } MAG_MODE_t;
 
 /*****************************************/
-/*** MAGNETOMETER CONTROL REGISTER #4  ***/
+/*** MAGNETOMETER CONTROL REGISTER B   ***/
 /*****************************************/
 typedef enum {
-	MAG_CTRL4_OMZ					= 0x0C,
-	MAG_CTRL4_ENDIAN				= 0x02
-} MAG_CTRL4_MASKS_t;
+    MAG_CFGB_OFFSETSINGLE   = 0x10,
+    MAG_CFGB_OFFSET_ISR     = 0x08,
+    MAG_CFGB_SET_FREQ       = 0x04,
+    MAG_CFGB_OFFSET_EN      = 0x02,
+    MAG_CFGB_LOWPASS_EN     = 0x01
+} MAG_CFGB_MASKS_t;
 
 typedef enum {
-	MAG_OMZ_LOW_POWER               =  0x00,
-	MAG_OMZ_MEDIUM_PERFORMANCE      =  0x04,
-	MAG_OMZ_HIGH_PERFORMANCE        =  0x08,
-	MAG_OMZ_ULTRA_HIGH_PERFORMANCE  =  0x0C
-} MAG_OMZ_t;
-
-typedef enum {
-	MAG_BIG_ENDIAN		= 0x00,  /* Unsure if this is BYTE or bits endian-ness */
-	MAG_LITTLE_ENDIAN	= 0x02
-} MAG_ENDIAN_t;
+    MAG_LOWPASS_OFF         = 0x00, // bandwidth is ODR/2
+    MAG_LOWPASS_ON          = 0x01  // bandwidth is ODR/4
+} MAG_LOWPASS_t;
 
 /*****************************************/
-/*** MAGNETOMETER CONTROL REGISTER #5  ***/
+/*** MAGNETOMETER CONTROL REGISTER C  ***/
 /*****************************************/
 typedef enum {
-	MAG_BDU_DISABLE = 0x00,
-	MAG_BDU_ENABLE  = 0x40
-} MAG_BDU_t;
+	MAG_CFGC_INTMAGPIN      = 0x40, // interrupt signal (INT bit in INT_SOURCE_REG_M) is driven on INT_MAG_PIN
+    MAG_CFGC_I2C_OFF        = 0x20, // disable I2C, only SPI may be used
+    MAG_CFGC_BDU            = 0x10, // read data in whole chunks (no update while reading between low and high parts)
+    MAG_CFGC_BLE            = 0x08, // invert the low and high data parts
+    MAG_CFGC_SELFTEST       = 0x02, // self test enabled
+    MAG_CFGC_INT_MAG        = 0x01  // configure the DRDY pin as an output
+} MAG_CFGC_MASKS_t;
+
+/*****************************************/
+/*** MAGNETOMETER CONTROL REGISTER     ***/
+/*****************************************/
+typedef enum {
+	MAG_CTRLREG_XIEN        = 0x80,
+    MAG_CTRLREG_YIEN        = 0x40,
+    MAG_CTRLREG_ZIEN        = 0x20,
+    MAG_CTRLREG_IEA         = 0x04, // controls polarity of interrupt pin, set for high and clear for low
+    MAG_CTRLREG_IEL         = 0x02, // set for a latched interrupt, clear for a pulsed interrupt
+    MAG_CTRLREG_IEN         = 0x01, // set to enable interrupt generation
+} MAG_CTRLREG_MASKS_t;
+
+/*****************************************/
+/*** MAGNETOMETER INTERRUPT SOURCE     ***/
+/*****************************************/
+typedef enum {
+    MAG_INTSRC_PTHX			= 0x80,
+    MAG_INTSRC_PTHY			= 0x40,
+    MAG_INTSRC_PTHZ			= 0x20,
+    MAG_INTSRC_NTHX			= 0x10,
+    MAG_INTSRC_NTHY			= 0x08,
+    MAG_INTSRC_NTHZ			= 0x04,
+    MAG_INTSRC_MROI			= 0x02,
+    MAG_INTSRC_INT			= 0x01
+} MAG_INT_SRC_t;
 
 /*****************************************/
 /***   MAGNETOMETER STATUS REGISTER    ***/
@@ -493,50 +467,5 @@ typedef enum {
 	MAG_STATUS_YDA			= 0x02,
 	MAG_STATUS_XDA			= 0x01
 } MAG_STATUS_t;
-
-typedef enum {
-	MAG_XYZDA_NO  = 0x00,
-	MAG_XYZDA_YES = 0x08
-} MAG_XYZDA_t;
-
-/*****************************************/
-/***   MAGNETOMETER INTERRUPT CONFIG   ***/
-/*****************************************/
-#define MAG_ISRCONFIG_MUSTSET		(0x08)
-
-typedef enum {
-	MAG_INTCFG_XEN			= (0x80 | MAG_ISRCONFIG_MUSTSET),
-	MAG_INTCFG_YEN			= (0x40 | MAG_ISRCONFIG_MUSTSET),
-	MAG_INTCFG_ZEN			= (0x20 | MAG_ISRCONFIG_MUSTSET)
-} MAG_INT_CFG_t;
-
-typedef enum {
-	MAG_ISR_ACTIVE_LO		= (0x00 | MAG_ISRCONFIG_MUSTSET),
-	MAG_ISR_ACTIVE_HI		= (0x04 | MAG_ISRCONFIG_MUSTSET)
-} MAG_ISR_LEVEL_t;
-
-typedef enum {
-	MAG_ISR2_LATCH_ON		= (0x00 | MAG_ISRCONFIG_MUSTSET),
-	MAG_ISR2_LATCH_OFF		= (0x02 | MAG_ISRCONFIG_MUSTSET)
-} MAG_ISR_LATCH_t;
-
-typedef enum {
-	MAG_ISR_DISABLE			= (0x00 | MAG_ISRCONFIG_MUSTSET),
-	MAG_ISR_ENABLE			= (0x01 | MAG_ISRCONFIG_MUSTSET)
-} MAG_ISR_ENABLE_t;
-
-/*****************************************/
-/***   MAGNETOMETER INTERRUPT SOURCE   ***/
-/*****************************************/
-typedef enum {
-	MAG_INTSRC_PTHX			= 0x80,
-	MAG_INTSRC_PTHY			= 0x40,
-	MAG_INTSRC_PTHZ			= 0x20,
-	MAG_INTSRC_NTHX			= 0x10,
-	MAG_INTSRC_NTHY			= 0x08,
-	MAG_INTSRC_NTHZ			= 0x04,
-	MAG_INTSRC_MROI			= 0x02,
-	MAG_INTSRC_INT			= 0x01
-} MAG_INT_SRC_t;
 
 #endif
