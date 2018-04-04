@@ -468,6 +468,14 @@
       <SubType>compile</SubType>
       <Link>LSM303.h</Link>
     </Compile>
+    <Compile Include="..\..\LSM303AGR.c">
+      <SubType>compile</SubType>
+      <Link>LSM303AGR.c</Link>
+    </Compile>
+    <Compile Include="..\..\LSM303AGR.h">
+      <SubType>compile</SubType>
+      <Link>LSM303AGR.h</Link>
+    </Compile>
     <Compile Include="..\..\LSM303AGRTypes.h">
       <SubType>compile</SubType>
       <Link>LSM303AGRTypes.h</Link>
