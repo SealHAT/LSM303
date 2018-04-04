@@ -468,6 +468,10 @@
       <SubType>compile</SubType>
       <Link>LSM303.h</Link>
     </Compile>
+    <Compile Include="..\..\LSM303AGRTypes.h">
+      <SubType>compile</SubType>
+      <Link>LSM303AGRTypes.h</Link>
+    </Compile>
     <Compile Include="..\..\LSM303CTypes.h">
       <SubType>compile</SubType>
       <Link>LSM303CTypes.h</Link>
@@ -881,9 +885,6 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="hri\hri_wdt_d21.h">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="LSM303AGR.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="main.c">

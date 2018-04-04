@@ -46,8 +46,6 @@ typedef struct {
 /***     LSM303C Accelerometer Registers     ***/
 /***********************************************/
 typedef enum {
-	ACC_TEMP_L       = 0x0B,
-	ACC_TEMP_H       = 0x0C,
 	ACC_WHO_AM_I     = 0x0F,
 	ACC_ACT_TSH      = 0x1E,
 	ACC_ACT_DUR      = 0x1F,
