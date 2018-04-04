@@ -169,114 +169,60 @@ typedef enum {
 /*** ACCELEROMETER CONTROL REGISTER #4 ***/
 /*****************************************/
 typedef enum {
-	ACC_CTRL4_BW			= 0xC0,
-	ACC_CTRL4_FS			= 0x30,
-	ACC_CTRL4_SCALEODR		= 0x08,
-	ACC_CTRL4_INCREMENT		= 0x04,
-	ACC_CTRL4_I2C			= 0x02,
-	ACC_CTRL4_SPI			= 0x01
+    ACC_CTRL4_BDU           = 0x80,
+    ACC_CTRL4_BLE           = 0x40, /* Only available in high-res mode */
+    ACC_CTRL4_FS            = 0x30,
+    ACC_CTRL4_HR            = 0x08, /* Must be set in conjunction with  */
+    ACC_CTRL4_ST            = 0x06,
+    ACC_CTRL4_SPI_EN        = 0x01
 } ACC_CTRL4_MASKS_t;
 
 typedef enum {
-	ACC_BW_400			= 0x00,
-	ACC_BW_200			= 0x10,
-	ACC_BW_100			= 0x80,
-	ACC_BW_50			= 0xC0
-} ACC_BW_t;
-
-typedef enum {
-	ACC_FS_2G = 0x00,
-	ACC_FS_4G = 0x20,
-	ACC_FS_8G = 0x30
+	ACC_FS_2G                   = 0x00,
+	ACC_FS_4G                   = 0x10,
+	ACC_FS_8G                   = 0x20,
+    ACC_FS_16G                  = 0x30
 } ACC_FS_t;
 
 typedef enum {
-	ACC_SCALE_ODR_OFF	= 0x00,
-	ACC_SCALE_ODR_ON	= 0x08
-} ACC_ODR_SCALE_t;
+    ACC_SELFTEST_OFF            = 0x00,
+    ACC_SELFTEST_1              = 0x40,
+    ACC_SELFTEST_2              = 0x60,
+} ACC_FS_t;
 
 typedef enum {
-	ACC_INCREMENT		= 0x04,
-	ACC_NO_INCREMENT	= 0x00
-} ACC_INCREMENT_t;
-
-typedef enum {
-	ACC_I2C_ON		= 0x00,
-	ACC_I2C_OFF		= 0x02
-} ACC_I2C_t;
-
-typedef enum {
-	ACC_SPI_OFF		= 0x00,
-	ACC_SPI_ON		= 0x01
+	ACC_SPI_OFF		        = 0x00,
+	ACC_SPI_ON		        = 0x01
 } ACC_SPI_t;
 
 /*****************************************/
 /*** ACCELEROMETER CONTROL REGISTER #5 ***/
 /*****************************************/
 typedef enum {
-	ACC_DEBUG_ON			= 0x80,
-	ACC_DEBUG_OFF			= 0x00
-} ACC_ENABLE_DEBUG_t;
+    ACC_CTRL5_BOOT          = 0x80, 
+    ACC_CTRL5_FIFO_EN       = 0x40,
+    ACC_CTRL5_LIR_INT1      = 0x08,
+    ACC_CTRL5_D4D_INT1      = 0x04,
+    ACC_CTRL5_LIR_INT2      = 0x02,
+    ACC_CTRL5_D4D_INT2      = 0x01
+} ACC_CTRL5_MASKS_t;
 
 typedef enum {
-	ACC_SOFT_RESET			= 0x40,
-	ACC_NO_RESET			= 0x00
-} ACC_SOFT_RESET_t;
-
-typedef enum {
-	ACC_NO_DECIMATION		= 0x00,
-	ACC_DECIMATION_2		= 0x10,
-	ACC_DECIMATION_4		= 0x20,
-	ACC_DECIMATION_8		= 0x30
-} ACC_DECIMATION_t;
-
-typedef enum {
-	ACC_SELF_TEST_OFF		= 0x00,
-	ACC_SELF_TEST_POS		= 0x04,
-	ACC_SELF_TEST_NEG		= 0x08
-} ACC_SELF_TEST_t;
-
-typedef enum {
-	ACC_ISR_ACTIVE_HI		= 0x00,
-	ACC_ISR_ACTIVE_LOW		= 0x02
-} ACC_ISR_LEVEL_t;
-
-typedef enum {
-	ACC_ISR_PUSHPULL		= 0x00,
-	ACC_ISR_OPENDRAIN		= 0x01
-} ACC_ISR_OUTPUT_MODE_t;
+    ACC_FIFO_ON		        = 0x40,
+    ACC_FIFO_OFF	        = 0x00
+} ACC_FIFO_t;
 
 /*****************************************/
 /*** ACCELEROMETER CONTROL REGISTER #6 ***/
 /*****************************************/
 typedef enum {
-	ACC_FORCE_REBOOT	= 0x80,
-	ACC_NO_REBOOT		= 0x00
-} ACC_FORCE_REBOOT_t;
-
-/*****************************************/
-/*** ACCELEROMETER CONTROL REGISTER #7 ***/
-/*****************************************/
-typedef enum {
-	ACC_DCRM1_OFF			= 0x00,
-	ACC_DCRM1_ON			= 0x10,
-	ACC_DCRM2_OFF			= 0x00,
-	ACC_DCRM2_ON			= 0x20
-} ACC_COUNT_RESET_MODE_t;
-
-typedef enum {
-	ACC_ISR1_LATCH_OFF	= 0x00,
-	ACC_ISR1_LATCH_ON	= 0x04,
-	ACC_ISR2_LATCH_OFF	= 0x00,
-	ACC_ISR2_LATCH_ON	= 0x08
-} ACC_ISR_LATCH_t;
-
-typedef enum {
-	ACC_ISR1_4D_OFF		= 0x00,
-	ACC_ISR1_4D_ON		= 0x02,
-	ACC_ISR2_4D_OFF		= 0x00,
-	ACC_ISR2_4D_ON		= 0x01
-} ACC_ISR_4D_t;
+    ACC_CTRL6_I2_CLICK_EN   = 0x80,
+    ACC_CTRL6_I2_INT1       = 0x40,
+    ACC_CTRL6_I2_INT2       = 0x20,
+    ACC_CTRL6_I2_BOOT       = 0x10,
+    ACC_CTRL6_I2_ACT        = 0x08,
+    ACC_CTRL6_I2_ACTIVE_MD  = 0x02
+} ACC_CTRL6_MASKS_t;
 
 /*****************************************/
 /*** ACCELEROMETER STATUS REGISTER     ***/
@@ -293,47 +239,104 @@ typedef enum {
 	ACC_ZYX_OVERRUN             = 0x80
 } ACC_STATUS_t;
 
+/*****************************************/
+/*** ACCELEROMETER FIFO CONTROL        ***/
+/*****************************************/
 typedef enum {
-	ACC_FIFOCTRL_BYPASS			= 0x00,
-	ACC_FIFOCTRL_FIFO			= 0x20,
-	ACC_FIFOCTRL_STREAM			= 0x40,
-	ACC_FIFOCTRL_STREAM2STOP	= 0x60,
-	ACC_FIFOCTRL_BYPASS2STREAM	= 0x80,
-	ACC_FIFOCTRL_BYPASS2FIFO	= 0xF0,
-	ACC_FIFOCTRL_FTH_MASK		= 0x1F
-} ACC_FIFO_CTRL_t;
+	ACC_FIFOCTRL_MODE       = 0xC0,
+    ACC_FIFOCTRL_TRIG       = 0x40,
+    ACC_FIFOCTRL_THRESH     = 0x1F
+} ACC_FIFO_CTRL_MASKS_t;
 
 typedef enum {
-	ACC_FIFOSRC_FTH			= 0x80,
-	ACC_FIFOSRC_OVR			= 0x40,
-	ACC_FIFOSRC_EMPTY		= 0x20,
-	ACC_FIFOSRC_FSS_MASK	= 0x1F
-} ACC_FIFO_SRC_t;
+	ACC_FIFO_BYPASS         = 0x00,
+    ACC_FIFO_FIFO           = 0x40,
+    ACC_FIFO_STREAM         = 0x80,
+    ACC_FIFO_STRM2FIFO      = 0xC0,
+} ACC_FIFO_MODE_t;
+
+/*****************************************/
+/*** ACCELEROMETER FIFO SOURCE         ***/
+/*****************************************/
+typedef enum {
+    ACC_FIFOSRC_WTM         = 0x80, // set high when FIFO contents exceed watermark
+    ACC_FIFOSRC_OVRN        = 0x40, // set high when the FIFO is full (32 samples) and the NEXT reading will overwrite the oldest
+    ACC_FIFOSRC_EMPTY       = 0x20, // set high when all samples are read and FIFo is empty
+    ACC_FIFOSRC_FSS         = 0x1F, // the current number of unread samples
+} ACC_FIFO_SRC_MASKS_t;
+
+/*****************************************/
+/*** ACCELEROMETER INTTERUPT CONFIG  ***/
+/*****************************************/
+typedef enum {
+    ACC_INTCFG_AOI          = 0x80,
+    ACC_INTCFG_6D           = 0x40,
+    ACC_INTCFG_ZHIE         = 0x20,
+    ACC_INTCFG_ZLIE         = 0x10,
+    ACC_INTCFG_YHIE         = 0x08,
+    ACC_INTCFG_YLIE         = 0x04,
+    ACC_INTCFG_XHIE         = 0x02,
+    ACC_INTCFG_XLIE         = 0x01,
+} ACC_INT_CFG_MASKS_t;
 
 typedef enum {
-	ACC_IGCFG_ANDOR			= 0x80,
-	ACC_IGCFG_6D			= 0x40,
-	ACC_IGCFG_ZHI			= 0x20,
-	ACC_IGCFG_ZLO			= 0x10,
-	ACC_IGCFG_YHI			= 0x08,
-	ACC_IGCFG_YLO			= 0x04,
-	ACC_IGCFG_XHI			= 0x02,
-	ACC_IGCFG_XLO			= 0x01,
-} ACC_IG_CFG_t;
+    ACC_INTMODE_OR          = 0x00,
+    ACC_INTMODE_6DMOVE      = 0x40,
+    ACC_INTMODE_AND         = 0x80,
+    ACC_INTMODE_6DPOS       = 0xC0
+} ACC_INT_MODE_t;
 
+/*****************************************/
+/*** ACCELEROMETER INTTERUPT SOURCE    ***/
+/*****************************************/
 typedef enum {
-	ACC_IGSRC_IA			= 0x40,
-	ACC_IGSRC_ZHI			= 0x20,
-	ACC_IGSRC_ZLO			= 0x10,
-	ACC_IGSRC_YHI			= 0x08,
-	ACC_IGSRC_YLO			= 0x04,
-	ACC_IGSRC_XHI			= 0x02,
-	ACC_IGSRC_XLO			= 0x01,
-} ACC_IG_SRC_t;
+    ACC_INTSRC_IA           = 0x40,
+    ACC_INTSRC_ZH           = 0x20,
+    ACC_INTSRC_ZL           = 0x10,
+    ACC_INTSRC_YH           = 0x08,
+    ACC_INTSRC_YL           = 0x04,
+    ACC_INTSRC_XH           = 0x02,
+    ACC_INTSRC_XL           = 0x01,
+} ACC_INT_SRC_MASKS_t;
 
+/********************************************/
+/*** ACCELEROMETER INTTERUPT THRESHOLD  ***/
+/********************************************/
 typedef enum {
-	ACC_IGDUR_WAIT			= 0x80
-} ACC_IG_DUR_t;
+    ACC_THS                 = 0x7F  // based on LSB value for each Full Scale Setting, see datasheet
+} ACC_THRESHOLD_MASKS_t;
+
+/********************************************/
+/*** ACCELEROMETER INTTERUPT DURATION  ***/
+/********************************************/
+typedef enum {
+    ACC_DUR                 = 0x7F  // time measured in N/ODR where N is the contents of this register
+} ACC_DURATION_MASKS_t;
+
+/********************************************/
+/*** ACCELEROMETER CLICK CONFIGURATION  ***/
+/********************************************/
+typedef enum {
+    ACC_CLICKCFG_ZDIE       = 0x20, // double click on Z axis above threshold
+    ACC_CLICKCFG_ZSIE       = 0x10, // single click on Z axis above threshold
+    ACC_CLICKCFG_YDIE       = 0x08, // double click on Y axis above threshold
+    ACC_CLICKCFG_YSIE       = 0x04, // single click on Y axis above threshold
+    ACC_CLICKCFG_XDIE       = 0x02, // double click on X axis above threshold
+    ACC_CLICKCFG_XSIE       = 0x01, // single click on X axis above threshold
+} ACC_CLICK_CFG_MASKS_t;
+
+/********************************************/
+/*** ACCELEROMETER CLICK SOURCE           ***/
+/********************************************/
+typedef enum {
+    ACC_CLICKSRC_IA         = 0x40,
+    ACC_CLICKSRC_DCLICKEN   = 0x20,
+    ACC_CLICKSRC_SCLICKEN   = 0x10,
+    ACC_CLICKSRC_SIGN       = 0x08,
+    ACC_CLICKSRC_Z          = 0x04,
+    ACC_CLICKSRC_Y          = 0x02,
+    ACC_CLICKSRC_X          = 0x01
+} ACC_CLICK_SRC_MASKS_t;
 
 /***********************************************/
 /***     LSM303C Magnetometer Registers      ***/
