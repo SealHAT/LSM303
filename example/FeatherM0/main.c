@@ -3,63 +3,132 @@
 #include "LSM303.h"
 #include "analyze.h"
 #include "SerialPrint.h"
-#include "usb_start.h"
 
 #define STRING_SIZE (64)
 
+int32_t printAxis(AxesSI_t* reading);
+
 int main(void)
 {
-	char  output[STRING_SIZE];		/* A string used for output on USB */
 	AxesSI_t xcel;					/* Accelerometer reading */
-	AxesRaw_t mag;					/* Magnetometer reading */
-	int16_t   temp;					/* Magnetometer temperature */
+	AxesSI_t mag;					/* Magnetometer reading */
+	//int16_t   temp;					/* Magnetometer temperature */
 	IMU_STATUS_t newAcc, newMag;	/* Indicate a new sample */
-	float pitch, roll, yaw;
+    int32_t err;
 	
 	atmel_start_init();
 	lsm303_init(&wire);
 	lsm303_startAcc(ACC_FS_2G, ACC_ODR_50_Hz);
-//	lsm303_startMag(MAG_MODE_CONTINUOUS, MAG_DO_40_Hz, MAG_TEMP_ENABLE);
-	
+	lsm303_startMag(MAG_MODE_CONTINUOUS, MAG_DO_40_Hz, MAG_TEMP_ENABLE);
 	for(;;) {
-		/* Turn on LED if the DTR signal is set (serial terminal open on host) */
-		gpio_set_pin_level(LED_BUILTIN, usb_dtr());
 
 		/* Read and print the Accelerometer if it is ready */
 		newAcc = lsm303_statusAcc();
 		if(newAcc != NULL_STATUS) {
-			xcel  = lsm303_getGravity();
-			pitch = pitch_est(xcel);
-			roll  = roll_est(xcel);
-			//yaw  = yaw_est(xcel);
+            gpio_set_pin_level(LED_BUILTIN, true);
+            xcel  = lsm303_getGravity();
+            gpio_set_pin_level(LED_BUILTIN, false);
 			/* Print the data if USB is available */
 			if(usb_dtr()) {
-				printFloat(xcel.xAxis, 3);
-				usb_put(',');
-				printFloat(xcel.yAxis, 3);
-				usb_put(',');
-				printFloat(xcel.zAxis, 3);
-				usb_put(',');
-				printFloat(pitch, 3);
-				usb_put(',');
-				printFloat(roll, 3);
-				//usb_put(',');
-				//printFloat(yaw, 3);
-				usb_put('\n');
-			}
-		}
-		
-		/* Read and print the Magnetometer if it is ready */
-//		newMag = lsm303_statusMag();
-//		if(newMag != NULL_STATUS) {
-//			mag  = lsm303_readMag();
-//			temp = lsm303_readTemp();
-//			
-//			/* Print the data if USB is available */
-//			if(usb_dtr()) {
-//				snprintf(output, STRING_SIZE, "MAG:%d,%d,%d,%d\n", mag.xAxis, mag.yAxis, mag.zAxis, temp);
-//				usb_send_buffer((uint8_t*)output, strlen(output));
-//			}
-//		}
-	}
+				err = printAxis(&xcel);
+                if(err < 0) {
+                    delay_ms(1);
+                    usb_write("ERROR!\n", 7);
+                } // USB ERROR
+			} // USB DTR ON
+		} // NEW ACCEL
+	
+// 	/* Read and print the Magnetometer if it is ready */
+// 	newMag = lsm303_statusMag();
+// 	if(newMag != NULL_STATUS) {
+// 		gpio_set_pin_level(LED_BUILTIN, true);
+// 		mag  = lsm303_getGauss();
+// 		gpio_set_pin_level(LED_BUILTIN, false);
+// 		/* Print the data if USB is available */
+// 		if(usb_dtr()) {
+// 			err = printAxis(&mag);
+// 			if(err < 0) {
+// 				delay_ms(1);
+// 				usb_write("ERROR!\n", 7);
+// 			} // USB ERROR
+// 		} // USB DTR ON
+// 	} // NEW MAG
+	
+	} // FOREVER
+}
+
+static int ftostr(double number, uint8_t digits, char* buff, const int LEN) {
+    uint8_t i;
+    size_t n = 0;
+    
+    // Not a number, special floating point value
+    if (isnan(number)) {
+        n = snprintf(buff, LEN, "nan");
+    }
+    // infinity, special floating point value
+    else if (isinf(number)) {
+        n = snprintf(buff, LEN, "inf");
+    }
+    // constant determined empirically
+    else if (number > 4294967040.0) {
+        n = snprintf(buff, LEN, "ovf");
+    }
+    // constant determined empirically
+    else if (number <-4294967040.0) {
+        n = snprintf(buff, LEN, "ovf");
+    }
+    // A valid floating point value
+    else {
+        // Handle negative numbers
+        if (number < 0.0) {
+            buff[n++] = '-';
+            number = -number;
+        }
+
+        // Round correctly so that print(1.999, 2) prints as "2.00"
+        double rounding = 0.5;
+        for (i = 0; i < digits; i++) {
+            rounding /= 10.0;
+        }
+        number += rounding;
+
+        // Extract the integer part of the number and print it
+        unsigned long int_part = (unsigned long)number;
+        double remainder = number - (double)int_part;
+        n += snprintf(&buff[n], LEN-n, "%ld", int_part);
+
+        // Print the decimal point, but only if there are digits beyond
+        if (digits > 0) {
+            buff[n] = '.';
+            buff[++n] = '\0';
+            
+            // Extract digits from the remainder one at a time
+            while (digits-- > 0) {
+                // calculate the current digit
+                remainder *= 10.0;
+                unsigned int toPrint = (unsigned int)remainder;
+                
+                // overwrite the last null terminator with the current digit
+                n += snprintf(&buff[n], LEN-n, "%d", toPrint);
+                
+                // shift to the next digit
+                remainder -= toPrint;
+            }
+        }
+    } // VALID FLOAT BLOCK
+
+    return n;
+}
+
+int32_t printAxis(AxesSI_t* reading) {
+    static char output[STRING_SIZE];
+    int n = 0;
+
+    n += ftostr(reading->xAxis, 3, &output[n], STRING_SIZE - n);
+    output[n++] = ',';
+    n += ftostr(reading->yAxis, 3, &output[n], STRING_SIZE - n);
+    output[n++] = ',';
+    n += ftostr(reading->zAxis, 3, &output[n], STRING_SIZE - n);   
+    output[n++] = '\n';
+    return usb_write(output, n);
 }

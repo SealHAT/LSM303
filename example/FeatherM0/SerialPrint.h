@@ -23,6 +23,10 @@ extern "C" {
  */
 size_t printFloat(double number, uint8_t digits);
 
+size_t print(void* string);
+
+size_t println(void* string);
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus
