@@ -43,6 +43,17 @@ typedef enum {
     ZYX_OVERRUN             = 0x80
 } IMU_STATUS_t;
 
+typedef enum {
+    AXIS_DISABLE_ALL    = 0x00,
+    AXIS_X_ENABLE       = 0x01,
+    AXIS_Y_ENABLE       = 0x02,
+    AXIS_YX_ENABLE      = 0x03,
+    AXIS_Z_ENABLE       = 0x04,
+    AXIS_ZX_ENABLE      = 0x05,
+    AXIS_ZY_ENABLE      = 0x06,
+    AXIS_ENABLE_ALL	    = 0x07
+} IMU_AXIS_t;
+
 /* Valid modes for the LSM303AGR */
 typedef enum {
     ACC_POWER_DOWN      = 0x00,
@@ -74,7 +85,7 @@ typedef enum {
     ACC_LP_400_HZ       = 0x78,
     ACC_LP_1620_HZ      = 0x88,
     ACC_LP_5376_HZ      = 0x98,
-} ACC_MODE_t;
+} ACC_OPMODE_t;
 
 typedef enum {
     ACC_SCALE_2G        = 0x00,
@@ -95,7 +106,7 @@ typedef enum {
     MAG_LP_20_HZ        = 0x14,
     MAG_LP_50_HZ        = 0x18,
     MAG_LP_100_HZ       = 0x1C
-} MAG_MODE_t;
+} MAG_OPMODE_t;
 
 /** @brief initialize the lsm303 IMU sensor without starting it
  *
@@ -116,7 +127,7 @@ bool lsm303_init(struct i2c_m_sync_desc *const WIRE);
  * @param MODE [IN] mode of the accelerometer to set the rate and the resolution
  * @return true if successful, false if registers are not set correctly
  */
-bool lsm303_startAcc(const ACC_AXIS_EN_t AXIS, const ACC_FS_t RANGE, const ACC_MODE_t MODE);
+bool lsm303_startAcc(const IMU_AXIS_t AXIS, const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MODE);
 
 /** @brief set the rate and enable the magnetometer
  *
@@ -126,7 +137,7 @@ bool lsm303_startAcc(const ACC_AXIS_EN_t AXIS, const ACC_FS_t RANGE, const ACC_M
  * @param MODE [IN] The mode of the sensor which specifies the rate and the power mode
  * @return true if successful, false otherwise
  */
-bool lsm303_startMag(const MAG_MODE_t MODE);
+bool lsm303_startMag(const MAG_OPMODE_t MODE);
 
 /** @brief Get the status of the accelerometer
  *

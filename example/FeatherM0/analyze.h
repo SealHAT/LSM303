@@ -4,7 +4,7 @@
  * Created: 3/7/2018 1:48:04 PM
  *  Author: hpan5
  */ 
-#include "LSM303.h"
+#include "LSM303AGR.h"
 #define PI (3.14159265358979323846)
 
 #ifndef ANALYZE_H_

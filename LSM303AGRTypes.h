@@ -144,11 +144,11 @@ typedef enum {
 	ACC_DISABLE_ALL     = 0x00,
 	ACC_X_ENABLE        = 0x01,
 	ACC_Y_ENABLE        = 0x02,
-    ACC_YX_ENABLE       = 0x03,
+	ACC_YX_ENABLE       = 0x03,
 	ACC_Z_ENABLE        = 0x04,
-    ACC_ZX_ENABLE       = 0x05,
-    ACC_ZY_ENABLE       = 0x06,
-    ACC_ENABLE_ALL	    = 0x07
+	ACC_ZX_ENABLE       = 0x05,
+	ACC_ZY_ENABLE       = 0x06,
+	ACC_ENABLE_ALL	    = 0x07
 } ACC_AXIS_EN_t;
 
 /*****************************************/
@@ -205,7 +205,7 @@ typedef enum {
     ACC_SELFTEST_OFF            = 0x00,
     ACC_SELFTEST_1              = 0x40,
     ACC_SELFTEST_2              = 0x60,
-} ACC_FS_t;
+} ACC_ST_t;
 
 typedef enum {
 	ACC_SPI_OFF		        = 0x00,
@@ -400,12 +400,11 @@ typedef enum {
     MAG_ODR_100_HZ           = 0x0C
 } MAG_ODR_t;
 
-/* in public header */
-// typedef enum {
-//     MAG_MODE_CONTINUOUS     = 0x00,
-//     MAG_MODE_SINGLE         = 0x01,
-//     MAG_MODE_IDLE		    = 0x03
-// } MAG_MODE_t;
+typedef enum {
+    MAG_MODE_CONTINUOUS     = 0x00,
+    MAG_MODE_SINGLE         = 0x01,
+    MAG_MODE_IDLE		    = 0x03
+} MAG_MODE_t;
 
 /*****************************************/
 /*** MAGNETOMETER CONTROL REGISTER B   ***/

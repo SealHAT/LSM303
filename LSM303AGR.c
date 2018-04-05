@@ -78,7 +78,7 @@ bool lsm303_init(struct i2c_m_sync_desc *const WIRE)
 	return true;
 }
 
-bool lsm303_startAcc(const ACC_AXIS_EN_t AXIS, const ACC_FS_t RANGE, const ACC_MODE_t MODE)
+bool lsm303_startAcc(const IMU_AXIS_t AXIS, const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MODE)
 {
 	uint8_t reg1 = 0x00;
 	uint8_t reg4 = 0x00;
@@ -99,7 +99,7 @@ bool lsm303_startAcc(const ACC_AXIS_EN_t AXIS, const ACC_FS_t RANGE, const ACC_M
 	return true;
 }
 
-bool lsm303_startMag(const MAG_MODE_t MODE)
+bool lsm303_startMag(const MAG_OPMODE_t MODE)
 {
 	uint8_t regA = MAG_TEMPCOMP_ENABLE | (MODE & 0x1F);
     uint8_t regB = MAG_CFGB_LOWPASS_EN;
@@ -139,7 +139,7 @@ AxesRaw_t lsm303_readMag()
 int16_t lsm303_readTemp()
 {
 	int16_t temperature;
-	readContinous(LSM303_MAG, MAG_TEMP_OUT_L, (uint8_t*)&temperature, 2);
+	readContinous(LSM303_ACCEL, ACC_TEMP_L, (uint8_t*)&temperature, 2);
 	return temperature;
 }
 

@@ -1,6 +1,6 @@
 #include <atmel_start.h>
 #include <stdio.h>
-#include "LSM303.h"
+#include "LSM303AGR.h"
 #include "analyze.h"
 #include "SerialPrint.h"
 
@@ -12,14 +12,14 @@ int main(void)
 {
 	AxesSI_t xcel;					/* Accelerometer reading */
 	AxesSI_t mag;					/* Magnetometer reading */
-	//int16_t   temp;					/* Magnetometer temperature */
+	//int16_t   temp;				    /* Magnetometer temperature */
 	IMU_STATUS_t newAcc, newMag;	/* Indicate a new sample */
     int32_t err;
 	
 	atmel_start_init();
 	lsm303_init(&wire);
-	lsm303_startAcc(ACC_FS_2G, ACC_ODR_50_Hz);
-	lsm303_startMag(MAG_MODE_CONTINUOUS, MAG_DO_40_Hz, MAG_TEMP_ENABLE);
+	lsm303_startAcc(AXIS_ENABLE_ALL, ACC_SCALE_2G, ACC_HR_50_HZ);
+	//lsm303_startMag(MAG_MODE_CONTINUOUS, MAG_DO_40_Hz, MAG_TEMP_ENABLE);
 	for(;;) {
 
 		/* Read and print the Accelerometer if it is ready */
