@@ -1,7 +1,7 @@
 // Data types used by the SparkFun LSM303C driver
 // Heavily based on code from ST
-#ifndef __LSM303C_TYPES_H__
-#define __LSM303C_TYPES_H__
+#ifndef __LSM303AGR_TYPES_H__
+#define __LSM303AGR_TYPES_H__
 
 
 /*************************************/
@@ -23,6 +23,20 @@ typedef enum {
 	ACC_LSM303AGR	= 0x33,
 	MAG_LSM303AGR	= 0x40
 } IMU_DEV_ID_t;
+
+/* Status return values from all IMU sensors */
+/* In the public header */
+// typedef enum {
+//     NULL_STATUS				= 0x00,
+//     X_NEW_DATA_AVAILABLE    = 0x01,
+//     Y_NEW_DATA_AVAILABLE    = 0x02,
+//     Z_NEW_DATA_AVAILABLE    = 0x04,
+//     ZYX_NEW_DATA_AVAILABLE  = 0x08,
+//     X_OVERRUN               = 0x10,
+//     Y_OVERRUN               = 0x20,
+//     Z_OVERRUN               = 0x40,
+//     ZYX_OVERRUN             = 0x80
+// } IMU_STATUS_t;
 
 typedef struct {
 	uint8_t reg1;
@@ -115,23 +129,26 @@ typedef enum {
 
 typedef enum {
 	ACC_ODR_POWER_DOWN  = 0x00,
-    ACC_ODR_1_HZ        = 0x01,
-    ACC_ODR_10_HZ       = 0x02,
-    ACC_ODR_25_HZ       = 0x03,
-    ACC_ODR_50_HZ       = 0x04,
-    ACC_ODR_100_HZ      = 0x05,
-    ACC_ODR_200_HZ      = 0x06,
-    ACC_ODR_400_HZ      = 0x07,
-    ACC_ODRLP_1620_HZ   = 0x08,
-    ACC_ODRLP_5376_HZ   = 0x09
+    ACC_ODR_1_HZ        = 0x10,
+    ACC_ODR_10_HZ       = 0x20,
+    ACC_ODR_25_HZ       = 0x30,
+    ACC_ODR_50_HZ       = 0x40,
+    ACC_ODR_100_HZ      = 0x50,
+    ACC_ODR_200_HZ      = 0x60,
+    ACC_ODR_400_HZ      = 0x70,
+    ACC_ODRLP_1620_HZ   = 0x80,
+    ACC_ODRLP_5376_HZ   = 0x90
 } ACC_ODR_t;
 
 typedef enum {
-	ACC_DISABLE_ALL = 0x00,
-	ACC_X_ENABLE    = 0x01,
-	ACC_Y_ENABLE    = 0x02,
-	ACC_Z_ENABLE    = 0x04,
-	ACC_ENABLE_ALL	= 0x07
+	ACC_DISABLE_ALL     = 0x00,
+	ACC_X_ENABLE        = 0x01,
+	ACC_Y_ENABLE        = 0x02,
+    ACC_YX_ENABLE       = 0x03,
+	ACC_Z_ENABLE        = 0x04,
+    ACC_ZX_ENABLE       = 0x05,
+    ACC_ZY_ENABLE       = 0x06,
+    ACC_ENABLE_ALL	    = 0x07
 } ACC_AXIS_EN_t;
 
 /*****************************************/
@@ -227,17 +244,7 @@ typedef enum {
 /*****************************************/
 /*** ACCELEROMETER STATUS REGISTER     ***/
 /*****************************************/
-typedef enum {
-	ACC_NULL_STATUS				= 0x00,
-	ACC_X_NEW_DATA_AVAILABLE    = 0x01,
-	ACC_Y_NEW_DATA_AVAILABLE    = 0x02,
-	ACC_Z_NEW_DATA_AVAILABLE    = 0x04,
-	ACC_ZYX_NEW_DATA_AVAILABLE  = 0x08,
-	ACC_X_OVERRUN               = 0x10,
-	ACC_Y_OVERRUN               = 0x20,
-	ACC_Z_OVERRUN               = 0x40,
-	ACC_ZYX_OVERRUN             = 0x80
-} ACC_STATUS_t;
+// use IMU_STATUS_t for all sensor returns
 
 /*****************************************/
 /*** ACCELEROMETER FIFO CONTROL        ***/
@@ -393,11 +400,12 @@ typedef enum {
     MAG_ODR_100_HZ           = 0x0C
 } MAG_ODR_t;
 
-typedef enum {
-    MAG_MODE_CONTINUOUS     = 0x00,
-    MAG_MODE_SINGLE         = 0x01,
-    MAG_MODE_IDLE		    = 0x03
-} MAG_MODE_t;
+/* in public header */
+// typedef enum {
+//     MAG_MODE_CONTINUOUS     = 0x00,
+//     MAG_MODE_SINGLE         = 0x01,
+//     MAG_MODE_IDLE		    = 0x03
+// } MAG_MODE_t;
 
 /*****************************************/
 /*** MAGNETOMETER CONTROL REGISTER B   ***/
@@ -456,16 +464,6 @@ typedef enum {
 /*****************************************/
 /***   MAGNETOMETER STATUS REGISTER    ***/
 /*****************************************/
-typedef enum {
-	MAG_NULL_STATUS			= 0x00,
-	MAG_STATUS_ZYXOR		= 0x80,
-	MAG_STATUS_ZOR			= 0x40,
-	MAG_STATUS_YOR			= 0x20,
-	MAG_STATUS_XOR			= 0x10,
-	MAG_STATUS_ZYXDA		= 0x08,
-	MAG_STATUS_ZDA			= 0x04,
-	MAG_STATUS_YDA			= 0x02,
-	MAG_STATUS_XDA			= 0x01
-} MAG_STATUS_t;
+// use IMU_STATUS_t for all status returns
 
-#endif
+#endif  /* __LSM303AGR_TYPES_H__ */

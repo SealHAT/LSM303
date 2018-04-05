@@ -6,15 +6,13 @@
  */ 
 
 
-#ifndef LSM303_H_
-#define LSM303_H_
+#ifndef LSM303AGR_H_
+#define LSM303AGR_H_
 
 #include <atmel_start.h>	/* where the IO functions live */
 #include <stdint.h>
 #include <stdbool.h>
 #include "math.h"
-
-#include "LSM303CTypes.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,18 +31,71 @@ typedef struct {
 	float zAxis;
 } AxesSI_t;
 
-/* Status return values from all IMU sensors */
 typedef enum {
-	NULL_STATUS				= 0x00,
-	X_NEW_DATA_AVAILABLE    = 0x01,
-	Y_NEW_DATA_AVAILABLE    = 0x02,
-	Z_NEW_DATA_AVAILABLE    = 0x04,
-	ZYX_NEW_DATA_AVAILABLE  = 0x08,
-	X_OVERRUN               = 0x10,
-	Y_OVERRUN               = 0x20,
-	Z_OVERRUN               = 0x40,
-	ZYX_OVERRUN             = 0x80
+    NULL_STATUS				= 0x00,
+    X_NEW_DATA_AVAILABLE    = 0x01,
+    Y_NEW_DATA_AVAILABLE    = 0x02,
+    Z_NEW_DATA_AVAILABLE    = 0x04,
+    ZYX_NEW_DATA_AVAILABLE  = 0x08,
+    X_OVERRUN               = 0x10,
+    Y_OVERRUN               = 0x20,
+    Z_OVERRUN               = 0x40,
+    ZYX_OVERRUN             = 0x80
 } IMU_STATUS_t;
+
+/* Valid modes for the LSM303AGR */
+typedef enum {
+    ACC_POWER_DOWN      = 0x00,
+
+    ACC_HR_1_HZ         = 0x14,
+    ACC_HR_10_HZ        = 0x24,
+    ACC_HR_25_HZ        = 0x34,
+    ACC_HR_50_HZ        = 0x44,
+    ACC_HR_100_HZ       = 0x54,
+    ACC_HR_200_HZ       = 0x64,
+    ACC_HR_400_HZ       = 0x74,
+    ACC_HR_1344_HZ      = 0x94,
+
+    ACC_NORM_1_HZ       = 0x10,
+    ACC_NORM_10_HZ      = 0x20,
+    ACC_NORM_25_HZ      = 0x30,
+    ACC_NORM_50_HZ      = 0x40,
+    ACC_NORM_100_HZ     = 0x50,
+    ACC_NORM_200_HZ     = 0x60,
+    ACC_NORM_400_HZ     = 0x70,
+    ACC_NORM_1344_HZ    = 0x90,
+
+    ACC_LP_1_HZ         = 0x18,
+    ACC_LP_10_HZ        = 0x28,
+    ACC_LP_25_HZ        = 0x38,
+    ACC_LP_50_HZ        = 0x48,
+    ACC_LP_100_HZ       = 0x58,
+    ACC_LP_200_HZ       = 0x68,
+    ACC_LP_400_HZ       = 0x78,
+    ACC_LP_1620_HZ      = 0x88,
+    ACC_LP_5376_HZ      = 0x98,
+} ACC_MODE_t;
+
+typedef enum {
+    ACC_SCALE_2G        = 0x00,
+    ACC_SCALE_4G        = 0x10,
+    ACC_SCALE_8G        = 0x20,
+    ACC_SCALE_16G       = 0x30
+} ACC_FULL_SCALE_t;
+
+typedef enum {
+    MAG_IDLE            = 0x03,
+
+    MAG_NORM_10_HZ      = 0x00,
+    MAG_NORM_20_HZ      = 0x04,
+    MAG_NORM_50_HZ      = 0x08,
+    MAG_NORM_100_HZ     = 0x0C,
+
+    MAG_LP_10_HZ        = 0x10,
+    MAG_LP_20_HZ        = 0x14,
+    MAG_LP_50_HZ        = 0x18,
+    MAG_LP_100_HZ       = 0x1C
+} MAG_MODE_t;
 
 /** @brief initialize the lsm303 IMU sensor without starting it
  *
@@ -56,33 +107,26 @@ bool lsm303_init(struct i2c_m_sync_desc *const WIRE);
 /** @brief Set the rate and range of the accelerometer
  *
  * This function sets the rate and range of the accelerometer. The Rate
- * can be any of the pre-defined rates in ACC_ODR_t, including the ACC_ODR_POWER_DOWN
+ * can be any of the pre-defined rates in ACC_MODE_t, including the ACC_POWER_DOWN
  * state. This is how the accelerometer is turned on and off manually. Once sampling the
  * readings will be ready to read, either by setting up the interrupts with the appropriate
  * functions or by polling the status register.
  *
  * @param RANGE [IN] the full scale range of the accelerometer
- * @param RATE [IN] the sample rate of the accelerometer
+ * @param MODE [IN] mode of the accelerometer to set the rate and the resolution
  * @return true if successful, false if registers are not set correctly
  */
-bool lsm303_startAcc(const ACC_FS_t RANGE, const ACC_ODR_t RATE);
+bool lsm303_startAcc(const ACC_AXIS_EN_t AXIS, const ACC_FS_t RANGE, const ACC_MODE_t MODE);
 
 /** @brief set the rate and enable the magnetometer
  *
  * This function enables the magnetometer at the specified rate. The internal
- * temperature sensor can also be enabled to help compensate readings.
- * The MODE setting can either one of three modes: 
- *     - MAG_MODE_OFF: disables the magnetometer
- *     - MAG_MODE_SINGLE: Performs a single reading and then automatically returns the mode to the OFF state
- *                        and indicates the data ready state on the DRDY pin.
- *     - MAG_MODE_CONTINUOUS: Continuously reads at the specified ODR rate. The magnetometer has no FIFO.
+ * temperature sensor is used to compensate the readings.
  *
- * @param MODE [IN] The mode of the sensor, as described above.
- * @param RATE [IN] The rate to sample the sensor, a predefined rate from MAG_DO_t
- * @param TEMPERATURE [IN] Enable or Disable the internal temperature sensor
- * @return
+ * @param MODE [IN] The mode of the sensor which specifies the rate and the power mode
+ * @return true if successful, false otherwise
  */
-bool lsm303_startMag(const MAG_MODE_t MODE, const MAG_DO_t RATE, const MAG_TEMP_EN_t TEMPERATURE);
+bool lsm303_startMag(const MAG_MODE_t MODE);
 
 /** @brief Get the status of the accelerometer
  *
@@ -158,4 +202,4 @@ inline float lsm303_getCelcius(const int16_t TEMP) { return (TEMP / 8.0) + 25.0;
 }
 #endif // __cplusplus
 
-#endif /* LSM303_H_ */
+#endif /* LSM303AGR_H_ */

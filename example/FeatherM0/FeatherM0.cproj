@@ -460,14 +460,6 @@
     </ToolchainSettings>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="..\..\LSM303.c">
-      <SubType>compile</SubType>
-      <Link>LSM303.c</Link>
-    </Compile>
-    <Compile Include="..\..\LSM303.h">
-      <SubType>compile</SubType>
-      <Link>LSM303.h</Link>
-    </Compile>
     <Compile Include="..\..\LSM303AGR.c">
       <SubType>compile</SubType>
       <Link>LSM303AGR.c</Link>
@@ -479,10 +471,6 @@
     <Compile Include="..\..\LSM303AGRTypes.h">
       <SubType>compile</SubType>
       <Link>LSM303AGRTypes.h</Link>
-    </Compile>
-    <Compile Include="..\..\LSM303CTypes.h">
-      <SubType>compile</SubType>
-      <Link>LSM303CTypes.h</Link>
     </Compile>
     <Compile Include="analyze.c">
       <SubType>compile</SubType>

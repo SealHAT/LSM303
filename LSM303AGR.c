@@ -4,29 +4,12 @@
  * Created: 2/23/2018 2:56:23 PM
  *  Author: hpan5
  */ 
-#include "LSM303.h"
+#include "LSM303AGR.h"
+#include "LSM303AGRTypes.h"
 #include "math.h"
 
 static struct i2c_m_sync_desc lsm303c_sync; /* Structure for IMU communications */
 static ACC_FS_t currentScale;
-
-static const accConfig_t accDefault = {
-	.reg1 = ACC_HR_DISABLE | ACC_ODR_POWER_DOWN | ACC_BDU_ENABLE | ACC_ENABLE_ALL,
-	.reg2 = ACC_HIGHPASS_ODR_50 | ACC_HIGHPASS_NORMAL | ACC_FDS_INTERNAL_BYPASS | ACC_ISR1_HP_BYPASS | ACC_ISR2_HP_BYPASS,
-	.reg3 = ACC_FIFO_OFF | ACC_FIFO_THRESHOLD_OFF | ACC_ISR_NONE,
-	.reg4 = ACC_BW_400 | ACC_FS_2G | ACC_SCALE_ODR_OFF | ACC_INCREMENT | ACC_I2C_ON | ACC_SPI_OFF,
-	.reg5 = ACC_DEBUG_OFF | ACC_NO_RESET | ACC_NO_DECIMATION | ACC_SELF_TEST_OFF | ACC_ISR_ACTIVE_HI | ACC_ISR_PUSHPULL,
-	.reg6 = ACC_NO_REBOOT,
-	.reg7 = ACC_DCRM1_OFF | ACC_DCRM2_OFF | ACC_ISR1_LATCH_OFF | ACC_ISR2_LATCH_OFF | ACC_ISR1_4D_OFF | ACC_ISR2_4D_OFF
-};
-
-static const magConfig_t magDefault = {
-	.reg1 = MAG_TEMP_DISABLE | MAG_SELFTEST_OFF | MAG_OMXY_LOW_POWER | MAG_DO_10_Hz,
-	.reg2 = MAG_FS_16_Ga | MAG_RESET_OFF,
-	.reg3 = MAG_I2C_ON | MAG_LOWPOWER_OFF | MAG_SPI_OFF | MAG_MODE_OFF,
-	.reg4 = MAG_OMZ_LOW_POWER | MAG_BIG_ENDIAN,
-	.reg5 = MAG_BDU_ENABLE
-};
 
 /* Read a single register for accelerometer*/
  static uint8_t readReg(const LSM303_DEV_ADDR_t SLAVE_ADDRESS, const uint8_t REG){
@@ -91,57 +74,40 @@ bool lsm303_init(struct i2c_m_sync_desc *const WIRE)
 {
 	lsm303c_sync  = *WIRE;
 	i2c_m_sync_enable(&lsm303c_sync);
-	
-	/* Configure Accelerometer with default settings */
-	writeReg(LSM303_ACCEL, ACC_CTRL1, accDefault.reg1);
-	writeReg(LSM303_ACCEL, ACC_CTRL2, accDefault.reg2);
-	writeReg(LSM303_ACCEL, ACC_CTRL3, accDefault.reg3);
-	writeReg(LSM303_ACCEL, ACC_CTRL4, accDefault.reg4);
-	writeReg(LSM303_ACCEL, ACC_CTRL5, accDefault.reg5);
-	writeReg(LSM303_ACCEL, ACC_CTRL6, accDefault.reg6);
-	writeReg(LSM303_ACCEL, ACC_CTRL7, accDefault.reg7);
-	
-	currentScale = (accDefault.reg4 & ACC_CTRL4_FS);
-	
-	/* Configure Magnetometer with default settings */
-	writeReg(LSM303_MAG, MAG_CTRL1, magDefault.reg1);
-	writeReg(LSM303_MAG, MAG_CTRL2, magDefault.reg2);
-	writeReg(LSM303_MAG, MAG_CTRL3, magDefault.reg3);
-	writeReg(LSM303_MAG, MAG_CTRL4, magDefault.reg4);
-	writeReg(LSM303_MAG, MAG_CTRL5, magDefault.reg5);
-	
+
 	return true;
 }
 
-bool lsm303_startAcc(const ACC_FS_t RANGE, const ACC_ODR_t RATE)
+bool lsm303_startAcc(const ACC_AXIS_EN_t AXIS, const ACC_FS_t RANGE, const ACC_MODE_t MODE)
 {
-	uint8_t reg1 = accDefault.reg1;
-	uint8_t reg4 = accDefault.reg4;
+	uint8_t reg1 = 0x00;
+	uint8_t reg4 = 0x00;
+
+    // set the ODR and the LPen bit in register 1
+    reg1 |= (MODE & 0xF8);
+    // set the axis to enable in register 1
+    reg1 |= AXIS;
+
+    // set the HR bit mode in register 4 with bit #2 of the MODE parameter
+    reg4 |= (MODE & 0x04) << 1;
+    reg4 |= (ACC_CTRL4_BDU | RANGE);
 
 	currentScale = RANGE;
-	
-	reg1 &= ~(ACC_CTRL1_ODR);
-	reg4 &= ~(ACC_CTRL4_FS);
-	reg1 |= (RATE);
-	reg4 |= (RANGE);
 
 	writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
 	writeReg(LSM303_ACCEL, ACC_CTRL4, reg4);
 	return true;
 }
 
-bool lsm303_startMag(const MAG_MODE_t MODE, const MAG_DO_t RATE, const MAG_TEMP_EN_t TEMPERATURE)
+bool lsm303_startMag(const MAG_MODE_t MODE)
 {
-	uint8_t reg1 = readReg(LSM303_MAG, MAG_CTRL1);
-	uint8_t	reg3 = readReg(LSM303_MAG, MAG_CTRL3);
-	
-	reg1 &= ~(MAG_CTRL1_DO | MAG_CTRL1_TEMP);
-	reg3 &= ~(MAG_CTRL3_MODE);
-	reg1 |= (RATE | TEMPERATURE);
-	reg3 |= (MODE);
+	uint8_t regA = MAG_TEMPCOMP_ENABLE | (MODE & 0x1F);
+    uint8_t regB = MAG_CFGB_LOWPASS_EN;
+    uint8_t regC = MAG_CFGC_BDU | MAG_CFGC_INT_MAG;
 
-	writeReg(LSM303_MAG, MAG_CTRL1, reg1);
-	writeReg(LSM303_MAG, MAG_CTRL3, reg3);
+	writeReg(LSM303_MAG, MAG_CFG_A, regA);
+	writeReg(LSM303_MAG, MAG_CFG_B, regB);
+    writeReg(LSM303_MAG, MAG_CFG_C, regC);
 	return true;
 }
 
@@ -169,6 +135,7 @@ AxesRaw_t lsm303_readMag()
 	return Axes;
 }
 
+// TODO - enable temp readings in a function, and read them correctly
 int16_t lsm303_readTemp()
 {
 	int16_t temperature;
@@ -176,6 +143,7 @@ int16_t lsm303_readTemp()
 	return temperature;
 }
 
+// TODO - scale is dependant on rate AND power mode. possibly set the scale in the mode function?
 AxesSI_t lsm303_getGravity()
 {
 	float scale;
@@ -189,6 +157,8 @@ AxesSI_t lsm303_getGravity()
 						break;
 		case ACC_FS_8G: scale = 0.244;
 						break;
+        case ACC_FS_16G: scale = 0.0;
+                        break;
 		default: scale = 0.0;
 	};
 	
