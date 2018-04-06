@@ -129,6 +129,22 @@ bool lsm303_init(struct i2c_m_sync_desc *const WIRE);
  */
 bool lsm303_startAcc(const IMU_AXIS_t AXIS, const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MODE);
 
+/** @brief stop the accelerometer and place it in power down mode
+ *
+ * This function halts the accelerometer and places it in power down mode, the last
+ * used mode will be preserved an can be resumed later.
+ * @return true if successful, false if I2C transmission fails
+ */
+bool lsm303_stopAcc();
+
+/** @brief Set the rate and range of the accelerometer
+ *
+ * This function resumes the last used settings. If the accelerometers last mode set
+ * was the power down mode then the default settings will be used (all axis at 2Gs in high res mode at 50Hz).
+ * @return true if successful, false if registers are not set correctly
+ */
+bool lsm303_resumeAcc();
+
 /** @brief set the rate and enable the magnetometer
  *
  * This function enables the magnetometer at the specified rate. The internal

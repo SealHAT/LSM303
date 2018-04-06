@@ -9,7 +9,8 @@
 #include "math.h"
 
 static struct i2c_m_sync_desc lsm303c_sync; /* Structure for IMU communications */
-static ACC_FS_t currentScale;
+static ACC_FULL_SCALE_t currentScale = ACC_SCALE_2G;
+static ACC_OPMODE_t     currentMode  = ACC_POWER_DOWN;
 
 /* Read a single register for accelerometer*/
  static uint8_t readReg(const LSM303_DEV_ADDR_t SLAVE_ADDRESS, const uint8_t REG){
@@ -82,7 +83,7 @@ bool lsm303_init(struct i2c_m_sync_desc *const WIRE)
 
 bool lsm303_startAcc(const IMU_AXIS_t AXIS, const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MODE)
 {
-	int32_t err  = 0;
+	int32_t err  = 0;       // error return for the function
 
     // set the ODR, LPen bit, and enabled axis in register 1
     uint8_t reg1 = (MODE & 0xF8) | AXIS;
@@ -91,19 +92,39 @@ bool lsm303_startAcc(const IMU_AXIS_t AXIS, const ACC_FULL_SCALE_t RANGE, const 
 	uint8_t reg4 = (MODE & 0x04) << 1;
     reg4 |= (ACC_CTRL4_BDU | RANGE);
 
-    // enable the FIFO
-//    uint8_t reg5 = ACC_FIFO_ON;
-
-    // Set FIFO to stream mode
-//    uint8_t fifoCtrl = ACC_FIFO_STREAM; 
-
 	currentScale = RANGE;
+    currentMode  = MODE;
 
 	err |= writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
 	err |= writeReg(LSM303_ACCEL, ACC_CTRL4, reg4);
-//    err |= writeReg(LSM303_ACCEL, ACC_CTRL5, reg5);
-//    err |= writeReg(LSM303_ACCEL, ACC_FIFO_CTRL, fifoCtrl);
-	return err;
+	return (err == 0);
+}
+
+bool lsm303_stopAcc();
+{
+    int32_t err  = 0;       // error return for the function
+    uint8_t reg1 = readReg(LSM303_ACCEL, ACC_CTRL1);
+
+    reg1 &= ~(ACC_CTRL1_ODR);
+
+    err = writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
+    return (err == 0);
+}
+
+bool lsm303_resumeAcc()
+{
+    int32_t err  = 0;       // error return for the function
+    uint8_t reg1 = readReg(LSM303_ACCEL, ACC_CTRL1);
+
+    if(currentMode == ACC_POWER_DOWN) {
+        lsm303_startAcc(AXIS_ENABLE_ALL, ACC_SCALE_2G, ACC_HR_50_HZ);
+    }
+    else {
+        reg1 &= ~(ACC_CTRL1_ODR);
+    }
+
+    err = writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
+    return (err == 0);
 }
 
 bool lsm303_startMag(const MAG_OPMODE_t MODE)
@@ -130,12 +151,55 @@ IMU_STATUS_t lsm303_statusMag()
 
 AxesRaw_t lsm303_readAcc()
 {
-	AxesRaw_t Axes;
-	readContinous(LSM303_ACCEL, ACC_OUT_X_L, (uint8_t*)&Axes, 6);
+    int32_t err  = 0;       // catch error value
+    uint_fast8_t shift = 0; // the shift amount depends on operating mode 
+	AxesRaw_t Axes;         // the return value
+
+    // get a new reading of raw data
+	err = readContinous(LSM303_ACCEL, ACC_OUT_X_L, (uint8_t*)&Axes, 6);
+
+    switch(currentMode) {
+        case ACC_HR_1_HZ:
+        case ACC_HR_10_HZ:
+        case ACC_HR_25_HZ:
+        case ACC_HR_50_HZ:
+        case ACC_HR_100_HZ:
+        case ACC_HR_200_HZ:
+        case ACC_HR_400_HZ:
+        case ACC_HR_1344_HZ: shift = 4;
+                             break;
+        case ACC_NORM_1_HZ:
+        case ACC_NORM_10_HZ:
+        case ACC_NORM_25_HZ:
+        case ACC_NORM_50_HZ:
+        case ACC_NORM_100_HZ:
+        case ACC_NORM_200_HZ:
+        case ACC_NORM_400_HZ:
+        case ACC_NORM_1344_HZ: shift = 6;
+                               break;
+        case ACC_LP_1_HZ:
+        case ACC_LP_10_HZ:
+        case ACC_LP_25_HZ:
+        case ACC_LP_50_HZ:
+        case ACC_LP_100_HZ:
+        case ACC_LP_200_HZ:
+        case ACC_LP_400_HZ:
+        case ACC_LP_1620_HZ:
+        case ACC_LP_5376_HZ: shift = 8;
+                             break;
+        default: err = -1;
+    };
 	
-    Axes.xAxis = Axes.xAxis >> 4;
-    Axes.yAxis = Axes.yAxis >> 4;
-    Axes.zAxis = Axes.zAxis >> 4;
+    if(err == 0) {
+        Axes.xAxis >>= shift;
+        Axes.yAxis >>= shift;
+        Axes.zAxis >>= shift;
+    }
+    else {
+        Axes.xAxis = 0xFF;
+        Axes.yAxis = 0xFF;
+        Axes.zAxis = 0xFF;
+    }
 
     return Axes;
 }
@@ -155,28 +219,74 @@ int16_t lsm303_readTemp()
 	return temperature;
 }
 
-// TODO - scale is dependant on rate AND power mode. possibly set the scale in the mode function?
 AxesSI_t lsm303_getGravity()
 {
-	float scale;
-	AxesSI_t  results;
-	AxesRaw_t accel = lsm303_readAcc();
+    // different Scales, there are 3 modes and 4 full scale settings. these are mg/LSB values from datasheet page 13.
+	static const float scale[3][4] = {{0.98, 1.95, 3.9, 11.72},
+                                      {3.9, 7.82, 15.63, 46.9},
+                                      {15.63, 31.26, 62.52, 187.58}};
+    int i,j;                            // index for the array above
+	AxesSI_t  results;                  // stores the results of the reading
 	
+    // get a new reading
+    AxesRaw_t accel = lsm303_readAcc();
+
+    switch(currentMode) {
+        case ACC_HR_1_HZ:
+        case ACC_HR_10_HZ:
+        case ACC_HR_25_HZ:
+        case ACC_HR_50_HZ:
+        case ACC_HR_100_HZ:
+        case ACC_HR_200_HZ:
+        case ACC_HR_400_HZ:
+        case ACC_HR_1344_HZ: i = 0;
+                             break;
+        case ACC_NORM_1_HZ:
+        case ACC_NORM_10_HZ:
+        case ACC_NORM_25_HZ:
+        case ACC_NORM_50_HZ:
+        case ACC_NORM_100_HZ:
+        case ACC_NORM_200_HZ:
+        case ACC_NORM_400_HZ:
+        case ACC_NORM_1344_HZ: i = 1;
+                               break;
+        case ACC_LP_1_HZ:
+        case ACC_LP_10_HZ:
+        case ACC_LP_25_HZ:
+        case ACC_LP_50_HZ:
+        case ACC_LP_100_HZ:
+        case ACC_LP_200_HZ:
+        case ACC_LP_400_HZ:
+        case ACC_LP_1620_HZ:
+        case ACC_LP_5376_HZ: i = 2;
+                               break;
+        default: i = 3;
+    };
+
 	switch(currentScale) {
-		case ACC_FS_2G: scale = 0.98;
-						break;
-		case ACC_FS_4G: scale = 1.95;
-						break;
-		case ACC_FS_8G: scale = 3.9;
-						break;
-        case ACC_FS_16G: scale = 11.72;
-                        break;
-		default: scale = 0.0;
+    	case ACC_FS_2G:  j = 0;
+    	break;
+    	case ACC_FS_4G:  j = 1;
+    	break;
+    	case ACC_FS_8G:  j = 2;
+    	break;
+    	case ACC_FS_16G: j = 3;
+    	break;
+    	default: j = 4;
 	};
 	
-	results.xAxis = ( accel.xAxis * scale / 1000.0);
-	results.yAxis = ( accel.yAxis * scale / 1000.0);
-	results.zAxis = ( accel.zAxis * scale / 1000.0);
+    // return error value if the index are out of range
+    if(i >= 3 || j >= 4 || accel.xAxis == 0xFF) {
+        results.xAxis = NAN;
+        results.yAxis = NAN;
+        results.zAxis = NAN;
+        return results;
+    }
+
+    // calculate the axis in Gs
+	results.xAxis = ( accel.xAxis * scale[i][j] / 1000.0);
+	results.yAxis = ( accel.yAxis * scale[i][j] / 1000.0);
+	results.zAxis = ( accel.zAxis * scale[i][j] / 1000.0);
 	
 	return results;
 }
@@ -186,9 +296,9 @@ AxesSI_t lsm303_getGauss()
 	AxesSI_t  results;
 	AxesRaw_t mag = lsm303_readMag();
 	
-	results.xAxis = (mag.xAxis * 0.58 / 1000.0);
-	results.yAxis = (mag.yAxis * 0.58 / 1000.0);
-	results.zAxis = (mag.zAxis * 0.58 / 1000.0);
+	results.xAxis = (mag.xAxis * 1.5 / 1000.0);
+	results.yAxis = (mag.yAxis * 1.5 / 1000.0);
+	results.zAxis = (mag.zAxis * 1.5 / 1000.0);
 	
 	return results;
 }
