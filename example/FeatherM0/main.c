@@ -24,7 +24,7 @@ int main(void)
 
 		/* Read and print the Accelerometer if it is ready */
 		newAcc = lsm303_statusAcc();
-		if(newAcc != NULL_STATUS) {
+		if(newAcc & ZYX_NEW_DATA_AVAILABLE) {
             gpio_set_pin_level(LED_BUILTIN, true);
             xcel  = lsm303_getGravity();
             gpio_set_pin_level(LED_BUILTIN, false);

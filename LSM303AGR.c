@@ -48,10 +48,12 @@ static ACC_FS_t currentScale;
 	return _i2c_m_sync_transfer(&lsm303c_sync.device, &msg);
 }
 
-static uint32_t readContinous(const LSM303_DEV_ADDR_t SLAVE_ADDRESS, const uint8_t STARTING_REG, uint8_t* buf, const uint32_t LEN)
+static uint32_t readContinous(const LSM303_DEV_ADDR_t SLAVE_ADDRESS, uint8_t STARTING_REG, uint8_t* buf, const uint32_t LEN)
 {
 	uint32_t retval = I2C_ERR_BAD_ADDRESS;
 	struct _i2c_m_msg msg;
+
+    STARTING_REG |= 0x80;
 	
 	msg.addr   = SLAVE_ADDRESS;
 	msg.len    = 1;
@@ -80,23 +82,28 @@ bool lsm303_init(struct i2c_m_sync_desc *const WIRE)
 
 bool lsm303_startAcc(const IMU_AXIS_t AXIS, const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MODE)
 {
-	uint8_t reg1 = 0x00;
-	uint8_t reg4 = 0x00;
+	int32_t err  = 0;
 
-    // set the ODR and the LPen bit in register 1
-    reg1 |= (MODE & 0xF8);
-    // set the axis to enable in register 1
-    reg1 |= AXIS;
+    // set the ODR, LPen bit, and enabled axis in register 1
+    uint8_t reg1 = (MODE & 0xF8) | AXIS;
 
     // set the HR bit mode in register 4 with bit #2 of the MODE parameter
-    reg4 |= (MODE & 0x04) << 1;
+	uint8_t reg4 = (MODE & 0x04) << 1;
     reg4 |= (ACC_CTRL4_BDU | RANGE);
+
+    // enable the FIFO
+//    uint8_t reg5 = ACC_FIFO_ON;
+
+    // Set FIFO to stream mode
+//    uint8_t fifoCtrl = ACC_FIFO_STREAM; 
 
 	currentScale = RANGE;
 
-	writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
-	writeReg(LSM303_ACCEL, ACC_CTRL4, reg4);
-	return true;
+	err |= writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
+	err |= writeReg(LSM303_ACCEL, ACC_CTRL4, reg4);
+//    err |= writeReg(LSM303_ACCEL, ACC_CTRL5, reg5);
+//    err |= writeReg(LSM303_ACCEL, ACC_FIFO_CTRL, fifoCtrl);
+	return err;
 }
 
 bool lsm303_startMag(const MAG_OPMODE_t MODE)
@@ -125,7 +132,12 @@ AxesRaw_t lsm303_readAcc()
 {
 	AxesRaw_t Axes;
 	readContinous(LSM303_ACCEL, ACC_OUT_X_L, (uint8_t*)&Axes, 6);
-	return Axes;
+	
+    Axes.xAxis = Axes.xAxis >> 4;
+    Axes.yAxis = Axes.yAxis >> 4;
+    Axes.zAxis = Axes.zAxis >> 4;
+
+    return Axes;
 }
 
 AxesRaw_t lsm303_readMag()
@@ -151,13 +163,13 @@ AxesSI_t lsm303_getGravity()
 	AxesRaw_t accel = lsm303_readAcc();
 	
 	switch(currentScale) {
-		case ACC_FS_2G: scale = 0.061;
+		case ACC_FS_2G: scale = 0.98;
 						break;
-		case ACC_FS_4G: scale = 0.122;
+		case ACC_FS_4G: scale = 1.95;
 						break;
-		case ACC_FS_8G: scale = 0.244;
+		case ACC_FS_8G: scale = 3.9;
 						break;
-        case ACC_FS_16G: scale = 0.0;
+        case ACC_FS_16G: scale = 11.72;
                         break;
 		default: scale = 0.0;
 	};

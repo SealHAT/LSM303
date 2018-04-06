@@ -24,20 +24,6 @@ typedef enum {
 	MAG_LSM303AGR	= 0x40
 } IMU_DEV_ID_t;
 
-/* Status return values from all IMU sensors */
-/* In the public header */
-// typedef enum {
-//     NULL_STATUS				= 0x00,
-//     X_NEW_DATA_AVAILABLE    = 0x01,
-//     Y_NEW_DATA_AVAILABLE    = 0x02,
-//     Z_NEW_DATA_AVAILABLE    = 0x04,
-//     ZYX_NEW_DATA_AVAILABLE  = 0x08,
-//     X_OVERRUN               = 0x10,
-//     Y_OVERRUN               = 0x20,
-//     Z_OVERRUN               = 0x40,
-//     ZYX_OVERRUN             = 0x80
-// } IMU_STATUS_t;
-
 typedef struct {
 	uint8_t reg1;
 	uint8_t reg2;
