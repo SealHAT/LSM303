@@ -94,6 +94,7 @@ typedef enum {
     ACC_SCALE_16G       = 0x30
 } ACC_FULL_SCALE_t;
 
+
 typedef enum {
     MAG_IDLE            = 0x03,
 
@@ -107,6 +108,8 @@ typedef enum {
     MAG_LP_50_HZ        = 0x18,
     MAG_LP_100_HZ       = 0x1C
 } MAG_OPMODE_t;
+
+
 
 /** @brief initialize the lsm303 IMU sensor without starting it
  *
