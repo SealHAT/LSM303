@@ -19,7 +19,8 @@ int main(void)
 	atmel_start_init();
 	lsm303_init(&wire);
 	lsm303_startAcc(AXIS_ENABLE_ALL, ACC_SCALE_2G, ACC_HR_50_HZ);
-	//lsm303_startMag(MAG_MODE_CONTINUOUS, MAG_DO_40_Hz, MAG_TEMP_ENABLE);
+	lsm303_startMag(MAG_LP_50_HZ);
+	lsm303_startFIFO();
 	for(;;) {
 
 		/* Read and print the Accelerometer if it is ready */

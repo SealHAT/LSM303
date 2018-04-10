@@ -100,16 +100,15 @@ bool lsm303_startAcc(const IMU_AXIS_t AXIS, const ACC_FULL_SCALE_t RANGE, const 
 	return (err == 0);
 }
 
-bool lsm303_startFIFO(ACC_FIFO_MODE_t MODE)
+bool lsm303_startFIFO()
 {	
 	int32_t err  = 0;       // error return for the function
 	
-	uint8_t fifoctrl_reg = (ACC_FIFOCTRL_MODE & MODE);
-	
 	//Enable FIFO
 	err |= writeReg(LSM303_ACCEL, ACC_CTRL5, ACC_CTRL5_FIFO_EN);
-	err |= writeReg(LSM303_ACCEL, ACC_FIFO_CTRL, fifoctrl_reg);
-	err |= writeReg(LSM303_ACCEL, ACC_CTRL3, ACC_CTRL3_I1_OVERRUN);
+	//Set FIFO mode
+	err |= writeReg(LSM303_ACCEL, ACC_FIFO_CTRL, ACC_FIFO_FIFO);
+	
 	return (err == 0);
 }
 

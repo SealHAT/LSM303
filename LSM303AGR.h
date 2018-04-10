@@ -132,6 +132,10 @@ bool lsm303_init(struct i2c_m_sync_desc *const WIRE);
  */
 bool lsm303_startAcc(const IMU_AXIS_t AXIS, const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MODE);
 
+
+
+bool lsm303_startFIFO();
+
 /** @brief stop the accelerometer and place it in power down mode
  *
  * This function halts the accelerometer and places it in power down mode, the last
