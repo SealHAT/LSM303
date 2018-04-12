@@ -209,25 +209,23 @@ AxesRaw_t lsm303_readAcc()
     return Axes;
 }
 
-bool lsm303_setFIFOenabled(bool enabled)
+bool lsm303_setFIFOenabled()
 {
 	int32_t err  = 0;       // error return for the function
-	uint8_t fifo_reg = readReg(LSM303_ACCEL, ACC_CTRL5);
+	uint8_t fifoenable_reg = readReg(LSM303_ACCEL, ACC_CTRL5);
+	uint8_t fifomode_reg = readReg(LSM303_ACCEL, ACC_FIFO_CTRL);
 	
-	if(enabled){
-		fifo_reg |= ACC_CTRL5_FIFO_EN;
-	}
-	else{
-		fifo_reg &= ~(ACC_CTRL5_FIFO_EN);
-	}
+	fifoenable_reg |= ACC_CTRL5_FIFO_EN;	//Enable FIFO
+	fifomode_reg |= ACC_FIFO_STREAM;	//Set FIFO to stream mode
 	
-	err |= writeReg(LSM303_ACCEL, ACC_CTRL5, fifo_reg);	
+	err |= writeReg(LSM303_ACCEL, ACC_CTRL5, fifoenable_reg);	
+	err |= writeReg(LSM303_ACCEL, ACC_FIFO_CTRL, fifomode_reg);	
 	
 	return (err == 0);
 }
 
 
-bool lsm303_setFIFOenabled(bool enabled)
+bool lsm303_setFIFOmode(mode)
 {
 	int32_t err  = 0;       // error return for the function
 	

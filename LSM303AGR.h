@@ -155,6 +155,18 @@ bool lsm303_stopAcc();
  */
 bool lsm303_resumeAcc();
 
+/** @brief set whether the FIFO buffer is enabled
+ *
+ * @param enabled New enabled state of the FIFO buffer
+ * @return true if successful, false otherwise
+ */
+bool lsm303_setFIFOenabled(bool enabled);
+
+/** @brief set whether the FIFO buffer is enabled
+ *
+ * @param enabled New enabled state of the FIFO buffer
+ * @return true if successful, false otherwise
+ */
 bool lsm303_setFIFOenabled(bool enabled);
 
 /** @brief set the rate and enable the magnetometer
