@@ -100,18 +100,6 @@ bool lsm303_startAcc(const IMU_AXIS_t AXIS, const ACC_FULL_SCALE_t RANGE, const 
 	return (err == 0);
 }
 
-bool lsm303_startFIFO()
-{	
-	int32_t err  = 0;       // error return for the function
-	
-	//Enable FIFO
-	err |= writeReg(LSM303_ACCEL, ACC_CTRL5, ACC_CTRL5_FIFO_EN);
-	//Set FIFO mode
-	err |= writeReg(LSM303_ACCEL, ACC_FIFO_CTRL, ACC_FIFO_FIFO);
-	
-	return (err == 0);
-}
-
 bool lsm303_stopAcc()
 {
     int32_t err  = 0;       // error return for the function
@@ -154,6 +142,11 @@ bool lsm303_startMag(const MAG_OPMODE_t MODE)
 IMU_STATUS_t lsm303_statusAcc()
 {
 	return (IMU_STATUS_t)readReg(LSM303_ACCEL, ACC_STATUS);
+}
+
+ACC_FIFO_STATUS_t lsm303_statusFIFO()
+{
+	return (ACC_FIFO_STATUS_t)readReg(LSM303_ACCEL, ACC_FIFO_SRC);
 }
 
 IMU_STATUS_t lsm303_statusMag()
@@ -214,6 +207,34 @@ AxesRaw_t lsm303_readAcc()
     }
 
     return Axes;
+}
+
+bool lsm303_setFIFOenabled(bool enabled)
+{
+	int32_t err  = 0;       // error return for the function
+	uint8_t fifo_reg = readReg(LSM303_ACCEL, ACC_CTRL5);
+	
+	if(enabled){
+		fifo_reg |= ACC_CTRL5_FIFO_EN;
+	}
+	else{
+		fifo_reg &= ~(ACC_CTRL5_FIFO_EN);
+	}
+	
+	err |= writeReg(LSM303_ACCEL, ACC_CTRL5, fifo_reg);	
+	
+	return (err == 0);
+}
+
+
+bool lsm303_setFIFOenabled(bool enabled)
+{
+	int32_t err  = 0;       // error return for the function
+	
+	//Enable FIFO
+	err |= writeReg(LSM303_ACCEL, ACC_CTRL5, ACC_CTRL5_FIFO_EN);
+	
+	return (err == 0);
 }
 
 AxesRaw_t lsm303_readMag()

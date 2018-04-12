@@ -44,6 +44,13 @@ typedef enum {
 } IMU_STATUS_t;
 
 typedef enum {
+	ACC_FIFOSRC_WTM         = 0x80, // set high when FIFO contents exceed watermark
+	ACC_FIFOSRC_OVRN        = 0x40, // set high when the FIFO is full (32 samples) and the NEXT reading will overwrite the oldest
+	ACC_FIFOSRC_EMPTY       = 0x20, // set high when all samples are read and FIFo is empty
+	ACC_FIFOSRC_FSS         = 0x1F, // the current number of unread samples
+} ACC_FIFO_STATUS_t;
+
+typedef enum {
     AXIS_DISABLE_ALL    = 0x00,
     AXIS_X_ENABLE       = 0x01,
     AXIS_Y_ENABLE       = 0x02,
@@ -132,10 +139,6 @@ bool lsm303_init(struct i2c_m_sync_desc *const WIRE);
  */
 bool lsm303_startAcc(const IMU_AXIS_t AXIS, const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MODE);
 
-
-
-bool lsm303_startFIFO();
-
 /** @brief stop the accelerometer and place it in power down mode
  *
  * This function halts the accelerometer and places it in power down mode, the last
@@ -151,6 +154,8 @@ bool lsm303_stopAcc();
  * @return true if successful, false if registers are not set correctly
  */
 bool lsm303_resumeAcc();
+
+bool lsm303_setFIFOenabled(bool enabled);
 
 /** @brief set the rate and enable the magnetometer
  *
