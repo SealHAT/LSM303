@@ -11,13 +11,14 @@
 static struct i2c_m_sync_desc lsm303c_sync; /* Structure for IMU communications */
 static ACC_FULL_SCALE_t currentScale = ACC_SCALE_2G;
 static ACC_OPMODE_t     currentMode  = ACC_POWER_DOWN;
+static IMU_AXIS_t       currentAccAx = AXIS_ENABLE_ALL;
+static int32_t          lastErr      = ERR_NONE;
 
 /* Read a single register for accelerometer*/
- static uint8_t readReg(const LSM303_DEV_ADDR_t SLAVE_ADDRESS, const uint8_t REG){
-	uint8_t retval;
+static int32_t readReg(const LSM303_DEV_ADDR_t SLAVE_ADDRESS, const uint8_t REG, uint8_t* dest)
+{
 	i2c_m_sync_set_slaveaddr(&lsm303c_sync, SLAVE_ADDRESS, I2C_M_SEVEN);
-	i2c_m_sync_cmd_read(&lsm303c_sync, REG, &retval, 1);
-	return retval;
+	return i2c_m_sync_cmd_read(&lsm303c_sync, REG, dest, 1);
 }
 
 /* @brief Read a single register
@@ -46,13 +47,13 @@ static ACC_OPMODE_t     currentMode  = ACC_POWER_DOWN;
 	msg.flags  = I2C_M_STOP;
 	msg.buffer = buff;
 	
-	return _i2c_m_sync_transfer(&lsm303c_sync.device, &msg);
+    return _i2c_m_sync_transfer(&lsm303c_sync.device, &msg);
 }
 
-static uint32_t readContinous(const LSM303_DEV_ADDR_t SLAVE_ADDRESS, uint8_t STARTING_REG, uint8_t* buf, const uint32_t LEN)
+static int32_t readContinous(const LSM303_DEV_ADDR_t SLAVE_ADDRESS, uint8_t STARTING_REG, uint8_t* buf, const uint32_t LEN)
 {
-	uint32_t retval = I2C_ERR_BAD_ADDRESS;
-	struct _i2c_m_msg msg;
+	struct  _i2c_m_msg msg;
+    int32_t err;        // error return value
 
     STARTING_REG |= 0x80;
 	
@@ -61,29 +62,26 @@ static uint32_t readContinous(const LSM303_DEV_ADDR_t SLAVE_ADDRESS, uint8_t STA
 	msg.flags  = 0;
 	msg.buffer = (uint8_t*)&STARTING_REG;
 	
-	retval = _i2c_m_sync_transfer(&lsm303c_sync.device, &msg);
+	err = _i2c_m_sync_transfer(&lsm303c_sync.device, &msg);
+    if(err != ERR_NONE) { return err; }
 	
 	msg.addr   = SLAVE_ADDRESS;
 	msg.len    = LEN;
 	msg.flags  = I2C_M_RD | I2C_M_STOP;
 	msg.buffer = buf;
 	
-	retval = _i2c_m_sync_transfer(&lsm303c_sync.device, &msg);
-
-	return retval;
+	return _i2c_m_sync_transfer(&lsm303c_sync.device, &msg);
 }
 
-bool lsm303_init(struct i2c_m_sync_desc *const WIRE)
+int32_t lsm303_init(struct i2c_m_sync_desc *const WIRE)
 {
 	lsm303c_sync  = *WIRE;
-	i2c_m_sync_enable(&lsm303c_sync);
-
-	return true;
+	return i2c_m_sync_enable(&lsm303c_sync);
 }
 
-bool lsm303_startAcc(const IMU_AXIS_t AXIS, const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MODE)
+int32_t lsm303_startAcc(const IMU_AXIS_t AXIS, const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MODE)
 {
-	int32_t err  = 0;       // error return for the function
+    int32_t err;        // error return value
 
     // set the ODR, LPen bit, and enabled axis in register 1
     uint8_t reg1 = (MODE & 0xF8) | AXIS;
@@ -95,14 +93,16 @@ bool lsm303_startAcc(const IMU_AXIS_t AXIS, const ACC_FULL_SCALE_t RANGE, const 
 	currentScale = RANGE;
     currentMode  = MODE;
 
-	err |= writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
-	err |= writeReg(LSM303_ACCEL, ACC_CTRL4, reg4);
-	return (err == 0);
+	err = writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
+    if(err == ERR_NONE) {
+        err = writeReg(LSM303_ACCEL, ACC_CTRL4, reg4);
+    }
+    return err;
 }
 
-bool lsm303_startFIFO(ACC_FIFO_MODE_t MODE)
+int32_t lsm303_startFIFO(ACC_FIFO_MODE_t MODE)
 {	
-	int32_t err  = 0;       // error return for the function
+	int32_t err = ERR_NONE;       // error return for the function
 	
 	uint8_t fifoctrl_reg = (ACC_FIFOCTRL_MODE & MODE);
 	
@@ -110,63 +110,78 @@ bool lsm303_startFIFO(ACC_FIFO_MODE_t MODE)
 	err |= writeReg(LSM303_ACCEL, ACC_CTRL5, ACC_CTRL5_FIFO_EN);
 	err |= writeReg(LSM303_ACCEL, ACC_FIFO_CTRL, fifoctrl_reg);
 	err |= writeReg(LSM303_ACCEL, ACC_CTRL3, ACC_CTRL3_I1_OVERRUN);
-	return (err == 0);
+	return err;
 }
 
-bool lsm303_stopAcc()
+int32_t lsm303_stopAcc()
 {
-    int32_t err  = 0;       // error return for the function
-    uint8_t reg1 = readReg(LSM303_ACCEL, ACC_CTRL1);
+    int32_t err;        // error return for the function
+    uint8_t reg1;       // hold the first control register
+    
+    err = readReg(LSM303_ACCEL, ACC_CTRL1, &reg1);
+    if(err != ERR_NONE) { return err; }
 
     reg1 &= ~(ACC_CTRL1_ODR);
 
-    err = writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
-    return (err == 0);
+    return writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
 }
 
-bool lsm303_resumeAcc()
+int32_t lsm303_resumeAcc()
 {
-    int32_t err  = 0;       // error return for the function
-    uint8_t reg1 = readReg(LSM303_ACCEL, ACC_CTRL1);
-
+    int32_t err;       // error return for the function
+    uint8_t reg1;      // holds register value
+    
     if(currentMode == ACC_POWER_DOWN) {
-        lsm303_startAcc(AXIS_ENABLE_ALL, ACC_SCALE_2G, ACC_HR_50_HZ);
+        err = lsm303_startAcc(AXIS_ENABLE_ALL, ACC_SCALE_2G, ACC_HR_50_HZ);
     }
     else {
+        err = readReg(LSM303_ACCEL, ACC_CTRL1, &reg1);
+        if(err != ERR_NONE) { return err; }
+
         reg1 &= ~(ACC_CTRL1_ODR);
+
+        err = writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
     }
 
-    err = writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
-    return (err == 0);
+    return err;
 }
 
 bool lsm303_startMag(const MAG_OPMODE_t MODE)
 {
-	uint8_t regA = MAG_TEMPCOMP_ENABLE | (MODE & 0x1F);
+	int32_t err = ERR_NONE;        // err return value
+    uint8_t regA = MAG_TEMPCOMP_ENABLE | (MODE & 0x1F);
     uint8_t regB = MAG_CFGB_LOWPASS_EN;
     uint8_t regC = MAG_CFGC_BDU | MAG_CFGC_INT_MAG;
 
-	writeReg(LSM303_MAG, MAG_CFG_A, regA);
-	writeReg(LSM303_MAG, MAG_CFG_B, regB);
-    writeReg(LSM303_MAG, MAG_CFG_C, regC);
+	err |= writeReg(LSM303_MAG, MAG_CFG_A, regA);
+	err |= writeReg(LSM303_MAG, MAG_CFG_B, regB);
+    err |= writeReg(LSM303_MAG, MAG_CFG_C, regC);
 	return true;
 }
 
 IMU_STATUS_t lsm303_statusAcc()
 {
-	return (IMU_STATUS_t)readReg(LSM303_ACCEL, ACC_STATUS);
+    uint8_t statusReg;
+	
+    readReg(LSM303_ACCEL, ACC_STATUS, &statusReg);
+
+    return (IMU_STATUS_t)statusReg;
 }
 
 IMU_STATUS_t lsm303_statusMag()
 {
-	return (IMU_STATUS_t)readReg(LSM303_MAG, MAG_STATUS_REG);
+    uint8_t statusReg;
+	
+    readReg(LSM303_MAG, MAG_STATUS_REG, &statusReg);
+
+    return (IMU_STATUS_t)statusReg;
 }
 
 AxesRaw_t lsm303_readAcc()
 {
-    int32_t err  = 0;       // catch error value
-    uint_fast8_t shift = 0; // the shift amount depends on operating mode 
-	AxesRaw_t Axes;         // the return value
+    int32_t err  = ERR_NONE;        // catch error value
+    uint_fast8_t shift = 0;         // the shift amount depends on operating mode 
+	AxesRaw_t Axes;                 // the return value
 
     // get a new reading of raw data
 	err = readContinous(LSM303_ACCEL, ACC_OUT_X_L, (uint8_t*)&Axes, 6);
@@ -200,10 +215,10 @@ AxesRaw_t lsm303_readAcc()
         case ACC_LP_1620_HZ:
         case ACC_LP_5376_HZ: shift = 8;
                              break;
-        default: err = -1;
+        default: err = ERR_INVALID_ARG;
     };
 	
-    if(err == 0) {
+    if(err == ERR_NONE) {
         Axes.xAxis >>= shift;
         Axes.yAxis >>= shift;
         Axes.zAxis >>= shift;
@@ -219,17 +234,23 @@ AxesRaw_t lsm303_readAcc()
 
 AxesRaw_t lsm303_readMag()
 {
+    int32_t err;
 	AxesRaw_t Axes;
-	readContinous(LSM303_MAG, MAG_OUTX_L, (uint8_t*)&Axes, 6);
-	return Axes;
+	
+    err = readContinous(LSM303_MAG, MAG_OUTX_L, (uint8_t*)&Axes, 6);
+	
+    return Axes;
 }
 
 // TODO - enable temp readings in a function, and read them correctly
 int16_t lsm303_readTemp()
 {
+    int32_t err;
 	int16_t temperature;
-	readContinous(LSM303_ACCEL, ACC_TEMP_L, (uint8_t*)&temperature, 2);
-	return temperature;
+
+	err = readContinous(LSM303_ACCEL, ACC_TEMP_L, (uint8_t*)&temperature, 2);
+	
+    return temperature;
 }
 
 AxesSI_t lsm303_getGravity()
