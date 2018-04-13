@@ -155,7 +155,7 @@ int32_t lsm303_resumeMag();
  *
  * This function checks if there is a new set of data in the accelerometer. 
  * It will return a system error code on failure, Most importantly 
- * ERR_OVERFLOW if data has overflowed. If there is no data it will return false, 
+ * -ERR_OVERFLOW (18) if data has overflowed. If there is no data it will return false, 
  * if there is data is will return true.
  *
  * @return positive if a new set of data is available, or a system error code.
@@ -166,7 +166,7 @@ int32_t ls303_acc_dataready();
  *
  * This function checks if there is a new set of data in the magnetometer.
  * it will return a system error code on failure, Most importantly 
- * ERR_OVERFLOW if data has overflowed. If there is no data it will return false, 
+ * -ERR_OVERFLOW (18) if data has overflowed. If there is no data it will return false, 
  * if there is data is will return true.
  *
  * @return positive if a new set of data is available, or a system error code.

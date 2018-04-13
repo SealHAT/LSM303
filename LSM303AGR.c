@@ -175,7 +175,7 @@ int32_t lsm303_stopMag()
     return writeReg(LSM303_MAG, MAG_CFG_A, regA);
 }
 
-lsm303_resumeMag()
+int32_t lsm303_resumeMag()
 {
     int32_t err;       // error return for the function
     uint8_t regA;      // holds register value
@@ -207,7 +207,7 @@ int32_t ls303_acc_dataready(void)
 
     // return overflow error if any data overflow bits are set. this also implies new data.
     if(statusReg & IMU_STATUS_DOVF) {
-        return ERR_OVERFLOW;
+        return -ERR_OVERFLOW;
     }
 
     // return the ZYX DRDY bit, this will be a positive true value but not 1
@@ -224,7 +224,7 @@ int32_t lsm303_mag_dataready(void)
 
     // return overflow error if any data overflow bits are set. this also implies new data.
     if(statusReg & IMU_STATUS_DOVF) {
-        return ERR_OVERFLOW;
+        return -ERR_OVERFLOW;
     }
 
     // return the ZYX DRDY bit, this will be a positive true value but not 1
