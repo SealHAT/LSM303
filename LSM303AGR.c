@@ -144,11 +144,6 @@ IMU_STATUS_t lsm303_statusAcc()
 	return (IMU_STATUS_t)readReg(LSM303_ACCEL, ACC_STATUS);
 }
 
-ACC_FIFO_STATUS_t lsm303_statusFIFO()
-{
-	return (ACC_FIFO_STATUS_t)readReg(LSM303_ACCEL, ACC_FIFO_SRC);
-}
-
 IMU_STATUS_t lsm303_statusMag()
 {
 	return (IMU_STATUS_t)readReg(LSM303_MAG, MAG_STATUS_REG);
@@ -209,30 +204,65 @@ AxesRaw_t lsm303_readAcc()
     return Axes;
 }
 
-bool lsm303_setFIFOenabled()
+bool lsm303_startFIFO()
 {
 	int32_t err  = 0;       // error return for the function
 	uint8_t fifoenable_reg = readReg(LSM303_ACCEL, ACC_CTRL5);
-	uint8_t fifomode_reg = readReg(LSM303_ACCEL, ACC_FIFO_CTRL);
+	uint8_t fifoctrl_reg = readReg(LSM303_ACCEL, ACC_FIFO_CTRL);
+	
+	fifoctrl_reg &= (0x20);	//Clear mode and threshold value
 	
 	fifoenable_reg |= ACC_CTRL5_FIFO_EN;	//Enable FIFO
-	fifomode_reg |= ACC_FIFO_STREAM;	//Set FIFO to stream mode
+	fifoctrl_reg |= (ACC_FIFO_STREAM|0x14);	//Set FIFO to stream mode and threshold value to be 20
 	
 	err |= writeReg(LSM303_ACCEL, ACC_CTRL5, fifoenable_reg);	
-	err |= writeReg(LSM303_ACCEL, ACC_FIFO_CTRL, fifomode_reg);	
+	err |= writeReg(LSM303_ACCEL, ACC_FIFO_CTRL, fifoctrl_reg);	
 	
 	return (err == 0);
 }
 
-
-bool lsm303_setFIFOmode(mode)
+bool lsm303_stopFIFO()
 {
 	int32_t err  = 0;       // error return for the function
+	uint8_t fifoenable_reg = readReg(LSM303_ACCEL, ACC_CTRL5);
 	
-	//Enable FIFO
-	err |= writeReg(LSM303_ACCEL, ACC_CTRL5, ACC_CTRL5_FIFO_EN);
+	fifoenable_reg &= ~(ACC_CTRL5_FIFO_EN);	//Disable FIFO
+	
+	err |= writeReg(LSM303_ACCEL, ACC_CTRL5, fifoenable_reg);
 	
 	return (err == 0);
+}
+
+bool lsm303_statusFIFOWTM() 
+{
+	uint8_t statusfifo_reg = readReg(LSM303_ACCEL, ACC_FIFO_SRC);
+	
+	return (statusfifo_reg&ACC_FIFOSRC_WTM);
+}
+
+bool lsm303_statusFIFOOVRN()
+{
+	uint8_t statusfifo_reg = readReg(LSM303_ACCEL, ACC_FIFO_SRC);
+	
+	return (statusfifo_reg&ACC_FIFOSRC_OVRN);
+}
+
+bool lsm303_statusFIFOEMPTY()
+{
+	uint8_t statusfifo_reg = readReg(LSM303_ACCEL, ACC_FIFO_SRC);
+	
+	return (statusfifo_reg&ACC_FIFOSRC_EMPTY);
+}
+
+uint8_t lsm303_statusFIFOFSS()
+{
+	uint8_t statusfifo_reg = readReg(LSM303_ACCEL, ACC_FIFO_SRC);
+	return (statusfifo_reg&ACC_FIFOSRC_FSS);
+}
+
+int32_t lsm303_FIFOread()
+{
+	
 }
 
 AxesRaw_t lsm303_readMag()
