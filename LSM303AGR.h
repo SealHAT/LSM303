@@ -31,29 +31,6 @@ typedef struct {
 	float zAxis;
 } AxesSI_t;
 
-typedef enum {
-    NULL_STATUS				= 0x00,
-    X_NEW_DATA_AVAILABLE    = 0x01,
-    Y_NEW_DATA_AVAILABLE    = 0x02,
-    Z_NEW_DATA_AVAILABLE    = 0x04,
-    ZYX_NEW_DATA_AVAILABLE  = 0x08,
-    X_OVERRUN               = 0x10,
-    Y_OVERRUN               = 0x20,
-    Z_OVERRUN               = 0x40,
-    ZYX_OVERRUN             = 0x80
-} IMU_STATUS_t;
-
-typedef enum {
-    AXIS_DISABLE_ALL    = 0x00,
-    AXIS_X_ENABLE       = 0x01,
-    AXIS_Y_ENABLE       = 0x02,
-    AXIS_YX_ENABLE      = 0x03,
-    AXIS_Z_ENABLE       = 0x04,
-    AXIS_ZX_ENABLE      = 0x05,
-    AXIS_ZY_ENABLE      = 0x06,
-    AXIS_ENABLE_ALL	    = 0x07
-} IMU_AXIS_t;
-
 /* Valid modes for the LSM303AGR */
 typedef enum {
     ACC_POWER_DOWN      = 0x00,
@@ -96,7 +73,7 @@ typedef enum {
 
 
 typedef enum {
-    MAG_IDLE            = 0x03,
+    MAG_IDLE            = 0x13,
 
     MAG_NORM_10_HZ      = 0x00,
     MAG_NORM_20_HZ      = 0x04,
@@ -114,7 +91,7 @@ typedef enum {
 /** @brief initialize the lsm303 IMU sensor without starting it
  *
  * @param WIRE [IN] The I2C descriptor to use for the device
- * @return true if successful, false if hardware allocation fails
+ * @return true if successful, system error code otherwise
  */
 int32_t lsm303_init(struct i2c_m_sync_desc *const WIRE);
 
@@ -128,23 +105,23 @@ int32_t lsm303_init(struct i2c_m_sync_desc *const WIRE);
  *
  * @param RANGE [IN] the full scale range of the accelerometer
  * @param MODE [IN] mode of the accelerometer to set the rate and the resolution
- * @return true if successful, false if registers are not set correctly
+ * @return true if successful, system error code otherwise
  */
-int32_t lsm303_startAcc(const IMU_AXIS_t AXIS, const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MODE);
+int32_t lsm303_startAcc(const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MODE);
 
 /** @brief stop the accelerometer and place it in power down mode
  *
  * This function halts the accelerometer and places it in power down mode, the last
  * used mode will be preserved an can be resumed later.
- * @return true if successful, false if I2C transmission fails
+ * @return true if successful, system error code otherwise
  */
 int32_t lsm303_stopAcc();
 
-/** @brief Set the rate and range of the accelerometer
+/** @brief resume the accelerometer operations
  *
  * This function resumes the last used settings. If the accelerometers last mode set
  * was the power down mode then the default settings will be used (all axis at 2Gs in high res mode at 50Hz).
- * @return true if successful, false if registers are not set correctly
+ * @return true if successful, system error code otherwise
  */
 int32_t lsm303_resumeAcc();
 
@@ -154,35 +131,54 @@ int32_t lsm303_resumeAcc();
  * temperature sensor is used to compensate the readings.
  *
  * @param MODE [IN] The mode of the sensor which specifies the rate and the power mode
- * @return true if successful, false otherwise
+ * @return true if successful, system error code otherwise
  */
 int32_t lsm303_startMag(const MAG_OPMODE_t MODE);
 
+/** @brief stop the magnetometer and place it in power down mode
+ *
+ * This function halts the accelerometer and places it in power down mode, the last
+ * used mode will be preserved an can be resumed later.
+ * @return true if successful, system error code otherwise
+ */
+int32_t lsm303_stopMag();
+
+/** @brief resume the magnetometer with the last used settings
+ *
+ * This function resumes the last used settings. If the magnetometer last mode set
+ * was the power down mode then the default settings will be used (low power at 20 Hz).
+ * @return true if successful, system error code otherwise
+ */
+int32_t lsm303_resumeMag();
+
 /** @brief Get the status of the accelerometer
  *
- * The Sensor status enum defined several flags. It can indicate a data overflow for
- * both individual axis as well as all three axis combined. If neither condition is true
- * the NULL_STATUS value is returned.
+ * This function checks if there is a new set of data in the accelerometer. 
+ * It will return a system error code on failure, Most importantly 
+ * ERR_OVERFLOW if data has overflowed. If there is no data it will return false, 
+ * if there is data is will return true.
  *
- * @return the IMU_STATUS_t flags enumeration
+ * @return positive if a new set of data is available, or a system error code.
  */
-IMU_STATUS_t lsm303_statusAcc();
+int32_t ls303_acc_dataready();
 
 /** @brief Get the status of the magnetometer
  *
- * The Sensor status enum defined several flags. It can indicate a data overflow for
- * both individual axis as well as all three axis combined. If neither condition is true
- * the NULL_STATUS value is returned.
+ * This function checks if there is a new set of data in the magnetometer.
+ * it will return a system error code on failure, Most importantly 
+ * ERR_OVERFLOW if data has overflowed. If there is no data it will return false, 
+ * if there is data is will return true.
  *
- * @return the IMU_STATUS_t flags enumeration
+ * @return positive if a new set of data is available, or a system error code.
  */
-IMU_STATUS_t lsm303_statusMag();
+int32_t ls303_mag_dataready();
 
 /** @brief obtains a three-axis accelerometer reading
  *
  * Readings obtained from this function are "raw" and must be transformed into
  * floating point values if actual gravity readings are desired. This can be done
- * with the lsm303_getGravity() function.
+ * with the lsm303_getGravity() function. If there is a communication error the function
+ * will return a struct with all values set to 0xFF. This is invalid data.
  *
  * @return the three axis of the accelerometer as the AxesRaw_t struct
  */

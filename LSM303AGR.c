@@ -9,10 +9,9 @@
 #include "math.h"
 
 static struct i2c_m_sync_desc lsm303c_sync; /* Structure for IMU communications */
-static ACC_FULL_SCALE_t currentScale = ACC_SCALE_2G;
-static ACC_OPMODE_t     currentMode  = ACC_POWER_DOWN;
-static IMU_AXIS_t       currentAccAx = AXIS_ENABLE_ALL;
-static int32_t          lastErr      = ERR_NONE;
+static ACC_FULL_SCALE_t currentScale    = ACC_SCALE_2G;
+static ACC_OPMODE_t     currentAccMode  = ACC_POWER_DOWN;
+static MAG_OPMODE_t     currentMagMode  = MAG_IDLE;
 
 /* Read a single register for accelerometer*/
 static int32_t readReg(const LSM303_DEV_ADDR_t SLAVE_ADDRESS, const uint8_t REG, uint8_t* dest)
@@ -79,19 +78,19 @@ int32_t lsm303_init(struct i2c_m_sync_desc *const WIRE)
 	return i2c_m_sync_enable(&lsm303c_sync);
 }
 
-int32_t lsm303_startAcc(const IMU_AXIS_t AXIS, const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MODE)
+int32_t lsm303_startAcc(const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MODE)
 {
     int32_t err;        // error return value
 
     // set the ODR, LPen bit, and enabled axis in register 1
-    uint8_t reg1 = (MODE & 0xF8) | AXIS;
+    uint8_t reg1 = (MODE & 0xF8) | ACC_ENABLE_ALL;
 
     // set the HR bit mode in register 4 with bit #2 of the MODE parameter
 	uint8_t reg4 = (MODE & 0x04) << 1;
     reg4 |= (ACC_CTRL4_BDU | RANGE);
 
-	currentScale = RANGE;
-    currentMode  = MODE;
+	currentScale    = RANGE;
+    currentAccMode  = MODE;
 
 	err = writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
     if(err == ERR_NONE) {
@@ -131,8 +130,8 @@ int32_t lsm303_resumeAcc()
     int32_t err;       // error return for the function
     uint8_t reg1;      // holds register value
     
-    if(currentMode == ACC_POWER_DOWN) {
-        err = lsm303_startAcc(AXIS_ENABLE_ALL, ACC_SCALE_2G, ACC_HR_50_HZ);
+    if(currentAccMode == ACC_POWER_DOWN) {
+        err = lsm303_startAcc(ACC_SCALE_2G, ACC_HR_50_HZ);
     }
     else {
         err = readReg(LSM303_ACCEL, ACC_CTRL1, &reg1);
@@ -146,35 +145,90 @@ int32_t lsm303_resumeAcc()
     return err;
 }
 
-bool lsm303_startMag(const MAG_OPMODE_t MODE)
+int32_t lsm303_startMag(const MAG_OPMODE_t MODE)
 {
-	int32_t err = ERR_NONE;        // err return value
+	int32_t err  = ERR_NONE;        // err return value
+
     uint8_t regA = MAG_TEMPCOMP_ENABLE | (MODE & 0x1F);
     uint8_t regB = MAG_CFGB_LOWPASS_EN;
     uint8_t regC = MAG_CFGC_BDU | MAG_CFGC_INT_MAG;
 
+    currentMagMode = MODE;
+
 	err |= writeReg(LSM303_MAG, MAG_CFG_A, regA);
 	err |= writeReg(LSM303_MAG, MAG_CFG_B, regB);
     err |= writeReg(LSM303_MAG, MAG_CFG_C, regC);
-	return true;
+	return err;
 }
 
-IMU_STATUS_t lsm303_statusAcc()
+int32_t lsm303_stopMag()
 {
-    uint8_t statusReg;
-	
-    readReg(LSM303_ACCEL, ACC_STATUS, &statusReg);
+    int32_t err;        // error return for the function
+    uint8_t regA;       // hold the control register
+    
+    err = readReg(LSM303_MAG, MAG_CFG_A, &regA);
+    if(err != ERR_NONE) { return err; }
 
-    return (IMU_STATUS_t)statusReg;
+    // no need to clear first, idle is set when both mode bits are high
+    regA |= MAG_MODE_IDLE;
+
+    return writeReg(LSM303_MAG, MAG_CFG_A, regA);
 }
 
-IMU_STATUS_t lsm303_statusMag()
+lsm303_resumeMag()
 {
-    uint8_t statusReg;
-	
-    readReg(LSM303_MAG, MAG_STATUS_REG, &statusReg);
+    int32_t err;       // error return for the function
+    uint8_t regA;      // holds register value
+    
+    if(currentMagMode == MAG_IDLE) {
+        err = lsm303_startMag(MAG_LP_20_HZ);
+    }
+    else {
+        err = readReg(LSM303_MAG, MAG_CFG_A, &regA);
+        if(err != ERR_NONE) { return err; }
 
-    return (IMU_STATUS_t)statusReg;
+        // clear and set
+        regA &= ~(MAG_CFGA_MD | MAG_CFGA_LP);
+        regA |= currentMagMode;
+
+        err = writeReg(LSM303_MAG, MAG_CFG_A, regA);
+    }
+
+    return err;
+}
+
+int32_t ls303_acc_dataready(void)
+{
+    int32_t err = ERR_NONE;     // err return value
+    uint8_t statusReg;          // register
+
+    err = readReg(LSM303_ACCEL, ACC_STATUS, &statusReg);
+    if(err != ERR_NONE) { return err; }
+
+    // return overflow error if any data overflow bits are set. this also implies new data.
+    if(statusReg & IMU_STATUS_DOVF) {
+        return ERR_OVERFLOW;
+    }
+
+    // return the ZYX DRDY bit, this will be a positive true value but not 1
+    return (statusReg & ZYX_NEW_DATA_AVAILABLE);
+}
+
+int32_t lsm303_mag_dataready(void)
+{
+    int32_t err = ERR_NONE;     // err return value
+    uint8_t statusReg;          // register
+
+    err = readReg(LSM303_MAG, MAG_STATUS_REG, &statusReg);
+    if(err != ERR_NONE) { return err; }
+
+    // return overflow error if any data overflow bits are set. this also implies new data.
+    if(statusReg & IMU_STATUS_DOVF) {
+        return ERR_OVERFLOW;
+    }
+
+    // return the ZYX DRDY bit, this will be a positive true value but not 1
+    return (statusReg & ZYX_NEW_DATA_AVAILABLE);
 }
 
 AxesRaw_t lsm303_readAcc()
@@ -186,7 +240,7 @@ AxesRaw_t lsm303_readAcc()
     // get a new reading of raw data
 	err = readContinous(LSM303_ACCEL, ACC_OUT_X_L, (uint8_t*)&Axes, 6);
 
-    switch(currentMode) {
+    switch(currentAccMode) {
         case ACC_HR_1_HZ:
         case ACC_HR_10_HZ:
         case ACC_HR_25_HZ:
@@ -238,7 +292,7 @@ AxesRaw_t lsm303_readMag()
 	AxesRaw_t Axes;
 	
     err = readContinous(LSM303_MAG, MAG_OUTX_L, (uint8_t*)&Axes, 6);
-	
+
     return Axes;
 }
 
@@ -255,7 +309,7 @@ int16_t lsm303_readTemp()
 
 AxesSI_t lsm303_getGravity()
 {
-    // different Scales, there are 3 modes and 4 full scale settings. these are mg/LSB values from datasheet page 13.
+    // different Scales, there are 3 modes and 4 full scale settings. these are mg/LSB values from data sheet page 13.
 	static const float scale[3][4] = {{0.98, 1.95, 3.9, 11.72},
                                       {3.9, 7.82, 15.63, 46.9},
                                       {15.63, 31.26, 62.52, 187.58}};
@@ -265,7 +319,7 @@ AxesSI_t lsm303_getGravity()
     // get a new reading
     AxesRaw_t accel = lsm303_readAcc();
 
-    switch(currentMode) {
+    switch(currentAccMode) {
         case ACC_HR_1_HZ:
         case ACC_HR_10_HZ:
         case ACC_HR_25_HZ:
