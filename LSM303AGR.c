@@ -127,16 +127,17 @@ int32_t lsm303_resumeAcc()
     return (err == 0);
 }
 
-bool lsm303_startMag(const MAG_OPMODE_t MODE)
+int32_t lsm303_startMag(const MAG_OPMODE_t MODE)
 {
+	int32_t err  = 0;       // error return for the function
 	uint8_t regA = MAG_TEMPCOMP_ENABLE | (MODE & 0x1F);
     uint8_t regB = MAG_CFGB_LOWPASS_EN;
     uint8_t regC = MAG_CFGC_BDU | MAG_CFGC_INT_MAG;
 
-	writeReg(LSM303_MAG, MAG_CFG_A, regA);
-	writeReg(LSM303_MAG, MAG_CFG_B, regB);
-    writeReg(LSM303_MAG, MAG_CFG_C, regC);
-	return true;
+	err = writeReg(LSM303_MAG, MAG_CFG_A, regA);
+	err = writeReg(LSM303_MAG, MAG_CFG_B, regB);
+    err = writeReg(LSM303_MAG, MAG_CFG_C, regC);
+	return (err == 0);
 }
 
 IMU_STATUS_t lsm303_statusAcc()
@@ -213,7 +214,7 @@ int32_t lsm303_startFIFO()
 	fifoctrl_reg &= (0x20);	//Clear mode and threshold value
 	
 	fifoenable_reg |= ACC_CTRL5_FIFO_EN;	//Enable FIFO
-	fifoctrl_reg |= (ACC_FIFO_STREAM|0x14);	//Set FIFO to stream mode and threshold value to be 20
+	fifoctrl_reg |= (ACC_FIFO_STREAM|0x1C);	//Set FIFO to stream mode and threshold value to be 25
 	
 	err |= writeReg(LSM303_ACCEL, ACC_CTRL5, fifoenable_reg);	
 	err |= writeReg(LSM303_ACCEL, ACC_FIFO_CTRL, fifoctrl_reg);	
@@ -254,13 +255,13 @@ int32_t lsm303_statusFIFOEMPTY()
 	return (statusfifo_reg&ACC_FIFOSRC_EMPTY);
 }
 
-uint32_t lsm303_statusFIFOFSS()
+int32_t lsm303_statusFIFOFSS()
 {
 	uint8_t statusfifo_reg = readReg(LSM303_ACCEL, ACC_FIFO_SRC);
 	return ((statusfifo_reg&ACC_FIFOSRC_FSS)+1);
 }
 
-int32_t lsm303_FIFOread(const uint32_t num_unread)
+AxesRaw_t lsm303_FIFOread(const int32_t num_unread)
 {
 	int32_t err  = 0;       // catch error value
 	uint_fast8_t shift = 0; // the shift amount depends on operating mode
@@ -336,11 +337,14 @@ AxesSI_t lsm303_getGravity()
 	static const float scale[3][4] = {{0.98, 1.95, 3.9, 11.72},
                                       {3.9, 7.82, 15.63, 46.9},
                                       {15.63, 31.26, 62.52, 187.58}};
-    int i,j;                            // index for the array above
+    int i,j;
+	int32_t unread_num;                            // index for the array above
 	AxesSI_t  results;                  // stores the results of the reading
 	
+	unread_num = lsm303_statusFIFOFSS();
+	AxesRaw_t accel = lsm303_FIFOread(unread_num);
     // get a new reading
-    AxesRaw_t accel = lsm303_readAcc();
+    //AxesRaw_t accel = lsm303_readAcc();
 
     switch(currentMode) {
         case ACC_HR_1_HZ:

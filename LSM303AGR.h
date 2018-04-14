@@ -44,13 +44,6 @@ typedef enum {
 } IMU_STATUS_t;
 
 typedef enum {
-	ACC_FIFOSRC_WTM         = 0x80, // set high when FIFO contents exceed watermark
-	ACC_FIFOSRC_OVRN        = 0x40, // set high when the FIFO is full (32 samples) and the NEXT reading will overwrite the oldest
-	ACC_FIFOSRC_EMPTY       = 0x20, // set high when all samples are read and FIFo is empty
-	ACC_FIFOSRC_FSS         = 0x1F, // the current number of unread samples
-} ACC_FIFO_STATUS_t;
-
-typedef enum {
     AXIS_DISABLE_ALL    = 0x00,
     AXIS_X_ENABLE       = 0x01,
     AXIS_Y_ENABLE       = 0x02,
@@ -123,7 +116,7 @@ typedef enum {
  * @param WIRE [IN] The I2C descriptor to use for the device
  * @return true if successful, false if hardware allocation fails
  */
-bool lsm303_init(struct i2c_m_sync_desc *const WIRE);
+int32_t lsm303_init(struct i2c_m_sync_desc *const WIRE);
 
 /** @brief Set the rate and range of the accelerometer
  *
@@ -137,7 +130,7 @@ bool lsm303_init(struct i2c_m_sync_desc *const WIRE);
  * @param MODE [IN] mode of the accelerometer to set the rate and the resolution
  * @return true if successful, false if registers are not set correctly
  */
-bool lsm303_startAcc(const IMU_AXIS_t AXIS, const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MODE);
+int32_t lsm303_startAcc(const IMU_AXIS_t AXIS, const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MODE);
 
 /** @brief stop the accelerometer and place it in power down mode
  *
@@ -145,7 +138,7 @@ bool lsm303_startAcc(const IMU_AXIS_t AXIS, const ACC_FULL_SCALE_t RANGE, const 
  * used mode will be preserved an can be resumed later.
  * @return true if successful, false if I2C transmission fails
  */
-bool lsm303_stopAcc();
+int32_t lsm303_stopAcc();
 
 /** @brief Set the rate and range of the accelerometer
  *
@@ -153,31 +146,31 @@ bool lsm303_stopAcc();
  * was the power down mode then the default settings will be used (all axis at 2Gs in high res mode at 50Hz).
  * @return true if successful, false if registers are not set correctly
  */
-bool lsm303_resumeAcc();
+int32_t lsm303_resumeAcc();
 
 /** @brief Enable FIFO buffer and set the stream mode
  *
  * @param enabled New enabled state of the FIFO buffer
  * @return true if successful, false otherwise
  */
-bool lsm303_startFIFO();
+int32_t lsm303_startFIFO();
 
 /** @brief Disable FIFO buffer
  *
  * @param enabled New enabled state of the FIFO buffer
  * @return true if successful, false otherwise
  */
-bool lsm303_stopFIFO();
+int32_t lsm303_stopFIFO();
 
-bool lsm303_statusFIFOWTM() ;
+int32_t lsm303_statusFIFOWTM();
 
-bool lsm303_statusFIFOOVRN();
+int32_t lsm303_statusFIFOOVRN();
 
-bool lsm303_statusFIFOEMPTY();
+int32_t lsm303_statusFIFOEMPTY();
 
-uint8_t lsm303_statusFIFOFSS();
+int32_t lsm303_statusFIFOFSS();
 
-int32_t lsm303_FIFOread();
+AxesRaw_t lsm303_FIFOread(const int32_t num_unread);
 
 /** @brief set the rate and enable the magnetometer
  *
@@ -187,7 +180,7 @@ int32_t lsm303_FIFOread();
  * @param MODE [IN] The mode of the sensor which specifies the rate and the power mode
  * @return true if successful, false otherwise
  */
-bool lsm303_startMag(const MAG_OPMODE_t MODE);
+int32_t lsm303_startMag(const MAG_OPMODE_t MODE);
 
 /** @brief Get the status of the accelerometer
  *

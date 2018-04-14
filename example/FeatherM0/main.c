@@ -14,6 +14,7 @@ int main(void)
 	AxesSI_t mag;					/* Magnetometer reading */
 	//int16_t   temp;				    /* Magnetometer temperature */
 	IMU_STATUS_t newAcc, newMag;	/* Indicate a new sample */
+	//int32_t unread_num;
     int32_t err;
 	
 	atmel_start_init();
@@ -22,22 +23,21 @@ int main(void)
 	lsm303_startMag(MAG_LP_50_HZ);
 	lsm303_startFIFO();
 	for(;;) {
-
-		/* Read and print the Accelerometer if it is ready */
-		newAcc = lsm303_statusAcc();
-		if(newAcc & ZYX_NEW_DATA_AVAILABLE) {
-            gpio_set_pin_level(LED_BUILTIN, true);
-            xcel  = lsm303_getGravity();
-            gpio_set_pin_level(LED_BUILTIN, false);
+		while(lsm303_statusFIFOWTM() == 0){}
+		while(lsm303_statusFIFOEMPTY() == 0){
+			gpio_set_pin_level(LED_BUILTIN, true);
+			xcel  = lsm303_getGravity();
+			gpio_set_pin_level(LED_BUILTIN, false);
 			/* Print the data if USB is available */
 			if(usb_dtr()) {
 				err = printAxis(&xcel);
-                if(err < 0) {
-                    delay_ms(1);
-                    usb_write("ERROR!\n", 7);
-                } // USB ERROR
+				if(err < 0) {
+					delay_ms(1);
+					usb_write("ERROR!\n", 7);
+				} // USB ERROR
 			} // USB DTR ON
-		} // NEW ACCEL
+		}
+		
 	
 // 	/* Read and print the Magnetometer if it is ready */
 // 	newMag = lsm303_statusMag();
@@ -58,6 +58,23 @@ int main(void)
 	} // FOREVER
 }
 
+/////////////////////////////
+// 		/* Read and print the Accelerometer if it is ready */
+// 		newAcc = lsm303_statusAcc();
+// 		if(newAcc & ZYX_NEW_DATA_AVAILABLE) {
+// 			gpio_set_pin_level(LED_BUILTIN, true);
+// 			xcel  = lsm303_getGravity();
+// 			gpio_set_pin_level(LED_BUILTIN, false);
+// 			/* Print the data if USB is available */
+// 			if(usb_dtr()) {
+// 				err = printAxis(&xcel);
+// 				if(err < 0) {
+// 					delay_ms(1);
+// 					usb_write("ERROR!\n", 7);
+// 				} // USB ERROR
+// 			} // USB DTR ON
+// 		} // NEW ACCEL
+/////////////////////////////////////////////////////
 static int ftostr(double number, uint8_t digits, char* buff, const int LEN) {
     uint8_t i;
     size_t n = 0;
