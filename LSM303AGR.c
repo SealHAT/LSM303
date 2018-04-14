@@ -73,7 +73,7 @@ static uint32_t readContinous(const LSM303_DEV_ADDR_t SLAVE_ADDRESS, uint8_t STA
 	return retval;
 }
 
-bool lsm303_init(struct i2c_m_sync_desc *const WIRE)
+int32_t lsm303_init(struct i2c_m_sync_desc *const WIRE)
 {
 	lsm303c_sync  = *WIRE;
 	i2c_m_sync_enable(&lsm303c_sync);
@@ -81,7 +81,7 @@ bool lsm303_init(struct i2c_m_sync_desc *const WIRE)
 	return true;
 }
 
-bool lsm303_startAcc(const IMU_AXIS_t AXIS, const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MODE)
+int32_t lsm303_startAcc(const IMU_AXIS_t AXIS, const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MODE)
 {
 	int32_t err  = 0;       // error return for the function
 
@@ -100,7 +100,7 @@ bool lsm303_startAcc(const IMU_AXIS_t AXIS, const ACC_FULL_SCALE_t RANGE, const 
 	return (err == 0);
 }
 
-bool lsm303_stopAcc()
+int32_t lsm303_stopAcc()
 {
     int32_t err  = 0;       // error return for the function
     uint8_t reg1 = readReg(LSM303_ACCEL, ACC_CTRL1);
@@ -111,7 +111,7 @@ bool lsm303_stopAcc()
     return (err == 0);
 }
 
-bool lsm303_resumeAcc()
+int32_t lsm303_resumeAcc()
 {
     int32_t err  = 0;       // error return for the function
     uint8_t reg1 = readReg(LSM303_ACCEL, ACC_CTRL1);
@@ -204,7 +204,7 @@ AxesRaw_t lsm303_readAcc()
     return Axes;
 }
 
-bool lsm303_startFIFO()
+int32_t lsm303_startFIFO()
 {
 	int32_t err  = 0;       // error return for the function
 	uint8_t fifoenable_reg = readReg(LSM303_ACCEL, ACC_CTRL5);
@@ -221,7 +221,7 @@ bool lsm303_startFIFO()
 	return (err == 0);
 }
 
-bool lsm303_stopFIFO()
+int32_t lsm303_stopFIFO()
 {
 	int32_t err  = 0;       // error return for the function
 	uint8_t fifoenable_reg = readReg(LSM303_ACCEL, ACC_CTRL5);
@@ -233,36 +233,86 @@ bool lsm303_stopFIFO()
 	return (err == 0);
 }
 
-bool lsm303_statusFIFOWTM() 
+int32_t lsm303_statusFIFOWTM() 
 {
 	uint8_t statusfifo_reg = readReg(LSM303_ACCEL, ACC_FIFO_SRC);
 	
 	return (statusfifo_reg&ACC_FIFOSRC_WTM);
 }
 
-bool lsm303_statusFIFOOVRN()
+int32_t lsm303_statusFIFOOVRN()
 {
 	uint8_t statusfifo_reg = readReg(LSM303_ACCEL, ACC_FIFO_SRC);
 	
 	return (statusfifo_reg&ACC_FIFOSRC_OVRN);
 }
 
-bool lsm303_statusFIFOEMPTY()
+int32_t lsm303_statusFIFOEMPTY()
 {
 	uint8_t statusfifo_reg = readReg(LSM303_ACCEL, ACC_FIFO_SRC);
 	
 	return (statusfifo_reg&ACC_FIFOSRC_EMPTY);
 }
 
-uint8_t lsm303_statusFIFOFSS()
+uint32_t lsm303_statusFIFOFSS()
 {
 	uint8_t statusfifo_reg = readReg(LSM303_ACCEL, ACC_FIFO_SRC);
-	return (statusfifo_reg&ACC_FIFOSRC_FSS);
+	return ((statusfifo_reg&ACC_FIFOSRC_FSS)+1);
 }
 
-int32_t lsm303_FIFOread()
+int32_t lsm303_FIFOread(const uint32_t num_unread)
 {
+	int32_t err  = 0;       // catch error value
+	uint_fast8_t shift = 0; // the shift amount depends on operating mode
+	AxesRaw_t Axes;         // the return value
+
+	// get a new reading of raw data
+	err = readContinous(LSM303_ACCEL, ACC_OUT_X_L, (uint8_t*)&Axes, num_unread*6);
+
+	switch(currentMode) {
+		case ACC_HR_1_HZ:
+		case ACC_HR_10_HZ:
+		case ACC_HR_25_HZ:
+		case ACC_HR_50_HZ:
+		case ACC_HR_100_HZ:
+		case ACC_HR_200_HZ:
+		case ACC_HR_400_HZ:
+		case ACC_HR_1344_HZ: shift = 4;
+		break;
+		case ACC_NORM_1_HZ:
+		case ACC_NORM_10_HZ:
+		case ACC_NORM_25_HZ:
+		case ACC_NORM_50_HZ:
+		case ACC_NORM_100_HZ:
+		case ACC_NORM_200_HZ:
+		case ACC_NORM_400_HZ:
+		case ACC_NORM_1344_HZ: shift = 6;
+		break;
+		case ACC_LP_1_HZ:
+		case ACC_LP_10_HZ:
+		case ACC_LP_25_HZ:
+		case ACC_LP_50_HZ:
+		case ACC_LP_100_HZ:
+		case ACC_LP_200_HZ:
+		case ACC_LP_400_HZ:
+		case ACC_LP_1620_HZ:
+		case ACC_LP_5376_HZ: shift = 8;
+		break;
+		default: err = -1;
+	};
 	
+	if(err == 0) {
+		Axes.xAxis >>= shift;
+		Axes.yAxis >>= shift;
+		Axes.zAxis >>= shift;
+	}
+	else {
+		Axes.xAxis = 0xFF;
+		Axes.yAxis = 0xFF;
+		Axes.zAxis = 0xFF;
+	}
+
+	return Axes;
 }
 
 AxesRaw_t lsm303_readMag()
