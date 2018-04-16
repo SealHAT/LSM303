@@ -14,31 +14,34 @@ int main(void)
 	AxesSI_t mag;					/* Magnetometer reading */
 	//int16_t   temp;				    /* Magnetometer temperature */
 	IMU_STATUS_t newAcc, newMag;	/* Indicate a new sample */
-	//int32_t unread_num;
-    int32_t err;
+	volatile int32_t watermake_reach;
+    //int32_t success;
 	
 	atmel_start_init();
 	lsm303_init(&wire);
 	lsm303_startAcc(AXIS_ENABLE_ALL, ACC_SCALE_2G, ACC_HR_50_HZ);
 	lsm303_startMag(MAG_LP_50_HZ);
 	lsm303_startFIFO();
-	for(;;) {
+	for(;;) { 
+		watermake_reach = lsm303_statusFIFOWTM();
 		while(lsm303_statusFIFOWTM() == 0){}
-		while(lsm303_statusFIFOEMPTY() == 0){
-			gpio_set_pin_level(LED_BUILTIN, true);
-			xcel  = lsm303_getGravity();
-			gpio_set_pin_level(LED_BUILTIN, false);
-			/* Print the data if USB is available */
-			if(usb_dtr()) {
-				err = printAxis(&xcel);
-				if(err < 0) {
-					delay_ms(1);
-					usb_write("ERROR!\n", 7);
-				} // USB ERROR
-			} // USB DTR ON
-		}
-		
-	
+ 		while(lsm303_statusFIFOEMPTY() == 0){
+ 			gpio_toggle_pin_level(LED_BUILTIN);
+ 			delay_ms(1000);
+ 			xcel  = lsm303_getGravity();
+			delay_ms(1000);
+ 			gpio_set_pin_level(LED_BUILTIN, false);
+// 			/* Print the data if USB is available */
+// 			if(usb_dtr()) {
+// 				err = printAxis(&xcel);
+// 				if(err < 0) {
+// 					delay_ms(1);
+// 					usb_write("ERROR!\n", 7);
+// 				} // USB ERROR
+// 			} // USB DTR ON
+ 		}
+// 		
+	//gpio_set_pin_level(LED_BUILTIN, false);
 // 	/* Read and print the Magnetometer if it is ready */
 // 	newMag = lsm303_statusMag();
 // 	if(newMag != NULL_STATUS) {

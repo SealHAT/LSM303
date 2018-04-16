@@ -208,13 +208,13 @@ AxesRaw_t lsm303_readAcc()
 int32_t lsm303_startFIFO()
 {
 	int32_t err  = 0;       // error return for the function
-	uint8_t fifoenable_reg = readReg(LSM303_ACCEL, ACC_CTRL5);
-	uint8_t fifoctrl_reg = readReg(LSM303_ACCEL, ACC_FIFO_CTRL);
+	volatile uint8_t fifoenable_reg = readReg(LSM303_ACCEL, ACC_CTRL5);
+	volatile uint8_t fifoctrl_reg = readReg(LSM303_ACCEL, ACC_FIFO_CTRL);
 	
 	fifoctrl_reg &= (0x20);	//Clear mode and threshold value
 	
 	fifoenable_reg |= ACC_CTRL5_FIFO_EN;	//Enable FIFO
-	fifoctrl_reg |= (ACC_FIFO_STREAM|0x1C);	//Set FIFO to stream mode and threshold value to be 25
+	fifoctrl_reg |= (ACC_FIFO_STREAM|0x14);	//Set FIFO to stream mode and threshold value to be 25
 	
 	err |= writeReg(LSM303_ACCEL, ACC_CTRL5, fifoenable_reg);	
 	err |= writeReg(LSM303_ACCEL, ACC_FIFO_CTRL, fifoctrl_reg);	
@@ -236,9 +236,11 @@ int32_t lsm303_stopFIFO()
 
 int32_t lsm303_statusFIFOWTM() 
 {
-	uint8_t statusfifo_reg = readReg(LSM303_ACCEL, ACC_FIFO_SRC);
+	volatile uint8_t wtm;
+	volatile uint8_t statusfifo_reg = readReg(LSM303_ACCEL, ACC_FIFO_SRC);
 	
-	return (statusfifo_reg&ACC_FIFOSRC_WTM);
+	wtm = statusfifo_reg&ACC_FIFOSRC_WTM;
+	return (wtm == ACC_FIFOSRC_WTM);
 }
 
 int32_t lsm303_statusFIFOOVRN()
@@ -258,7 +260,7 @@ int32_t lsm303_statusFIFOEMPTY()
 int32_t lsm303_statusFIFOFSS()
 {
 	uint8_t statusfifo_reg = readReg(LSM303_ACCEL, ACC_FIFO_SRC);
-	return ((statusfifo_reg&ACC_FIFOSRC_FSS)+1);
+	return ((statusfifo_reg&ACC_FIFOSRC_FSS));
 }
 
 AxesRaw_t lsm303_FIFOread(const int32_t num_unread)
@@ -338,7 +340,7 @@ AxesSI_t lsm303_getGravity()
                                       {3.9, 7.82, 15.63, 46.9},
                                       {15.63, 31.26, 62.52, 187.58}};
     int i,j;
-	int32_t unread_num;                            // index for the array above
+	volatile int32_t unread_num;                            // index for the array above
 	AxesSI_t  results;                  // stores the results of the reading
 	
 	unread_num = lsm303_statusFIFOFSS();
