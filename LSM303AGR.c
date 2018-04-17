@@ -213,8 +213,8 @@ int32_t lsm303_startFIFO()
 	
 	fifoctrl_reg &= (0x20);	//Clear mode and threshold value
 	
-	fifoenable_reg |= ACC_CTRL5_FIFO_EN;	//Enable FIFO
-	fifoctrl_reg |= (ACC_FIFO_STREAM|0x14);	//Set FIFO to stream mode and threshold value to be 25
+	fifoenable_reg |= (ACC_CTRL5_FIFO_EN|ACC_CTRL5_BOOT);	//Enable FIFO
+	fifoctrl_reg |= (ACC_FIFO_STREAM|0x19);	//Set FIFO to stream mode and threshold value to be 25
 	
 	err |= writeReg(LSM303_ACCEL, ACC_CTRL5, fifoenable_reg);	
 	err |= writeReg(LSM303_ACCEL, ACC_FIFO_CTRL, fifoctrl_reg);	
@@ -227,7 +227,7 @@ int32_t lsm303_stopFIFO()
 	int32_t err  = 0;       // error return for the function
 	uint8_t fifoenable_reg = readReg(LSM303_ACCEL, ACC_CTRL5);
 	
-	fifoenable_reg &= ~(ACC_CTRL5_FIFO_EN);	//Disable FIFO
+	fifoenable_reg &= ~(ACC_CTRL5_FIFO_EN|ACC_CTRL5_BOOT);	//Disable FIFO
 	
 	err |= writeReg(LSM303_ACCEL, ACC_CTRL5, fifoenable_reg);
 	
@@ -239,22 +239,22 @@ int32_t lsm303_statusFIFOWTM()
 	volatile uint8_t wtm;
 	volatile uint8_t statusfifo_reg = readReg(LSM303_ACCEL, ACC_FIFO_SRC);
 	
-	wtm = statusfifo_reg&ACC_FIFOSRC_WTM;
+	wtm = (statusfifo_reg&ACC_FIFOSRC_WTM);
 	return (wtm == ACC_FIFOSRC_WTM);
 }
 
 int32_t lsm303_statusFIFOOVRN()
 {
 	uint8_t statusfifo_reg = readReg(LSM303_ACCEL, ACC_FIFO_SRC);
-	
 	return (statusfifo_reg&ACC_FIFOSRC_OVRN);
 }
 
 int32_t lsm303_statusFIFOEMPTY()
 {
+	volatile uint8_t empty;
 	uint8_t statusfifo_reg = readReg(LSM303_ACCEL, ACC_FIFO_SRC);
-	
-	return (statusfifo_reg&ACC_FIFOSRC_EMPTY);
+	empty = (statusfifo_reg&ACC_FIFOSRC_EMPTY);
+	return (empty == ACC_FIFOSRC_EMPTY);
 }
 
 int32_t lsm303_statusFIFOFSS()
@@ -263,14 +263,13 @@ int32_t lsm303_statusFIFOFSS()
 	return ((statusfifo_reg&ACC_FIFOSRC_FSS));
 }
 
-AxesRaw_t lsm303_FIFOread(const int32_t num_unread)
+int32_t lsm303_FIFOread(AxesRaw_t* buf, const int32_t num_unread)
 {
 	int32_t err  = 0;       // catch error value
 	uint_fast8_t shift = 0; // the shift amount depends on operating mode
-	AxesRaw_t Axes;         // the return value
 
 	// get a new reading of raw data
-	err = readContinous(LSM303_ACCEL, ACC_OUT_X_L, (uint8_t*)&Axes, num_unread*6);
+	err = readContinous(LSM303_ACCEL, ACC_OUT_X_L, (uint8_t*)buf, num_unread*6);
 
 	switch(currentMode) {
 		case ACC_HR_1_HZ:
@@ -304,18 +303,20 @@ AxesRaw_t lsm303_FIFOread(const int32_t num_unread)
 		default: err = -1;
 	};
 	
-	if(err == 0) {
-		Axes.xAxis >>= shift;
-		Axes.yAxis >>= shift;
-		Axes.zAxis >>= shift;
+	for(int i=0; i<num_unread; i++){
+		if(err == 0) {
+			buf[i].xAxis >>= shift;
+			buf[i].yAxis >>= shift;
+			buf[i].zAxis >>= shift;
+		}
+		else {
+			buf[i].xAxis = 0xFF;
+			buf[i].yAxis = 0xFF;
+			buf[i].zAxis = 0xFF;
+		}
 	}
-	else {
-		Axes.xAxis = 0xFF;
-		Axes.yAxis = 0xFF;
-		Axes.zAxis = 0xFF;
-	}
-
-	return Axes;
+	
+	return (num_unread*6);
 }
 
 AxesRaw_t lsm303_readMag()
@@ -339,14 +340,11 @@ AxesSI_t lsm303_getGravity()
 	static const float scale[3][4] = {{0.98, 1.95, 3.9, 11.72},
                                       {3.9, 7.82, 15.63, 46.9},
                                       {15.63, 31.26, 62.52, 187.58}};
-    int i,j;
-	volatile int32_t unread_num;                            // index for the array above
+    int i,j;                            // index for the array above
 	AxesSI_t  results;                  // stores the results of the reading
 	
-	unread_num = lsm303_statusFIFOFSS();
-	AxesRaw_t accel = lsm303_FIFOread(unread_num);
     // get a new reading
-    //AxesRaw_t accel = lsm303_readAcc();
+    AxesRaw_t accel = lsm303_readAcc();
 
     switch(currentMode) {
         case ACC_HR_1_HZ:

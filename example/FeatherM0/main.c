@@ -5,35 +5,36 @@
 #include "SerialPrint.h"
 
 #define STRING_SIZE (64)
-
+#define WATERMARK (25)
 int32_t printAxis(AxesSI_t* reading);
 
 int main(void)
 {
-	AxesSI_t xcel;					/* Accelerometer reading */
+	
 	AxesSI_t mag;					/* Magnetometer reading */
 	//int16_t   temp;				    /* Magnetometer temperature */
 	IMU_STATUS_t newAcc, newMag;	/* Indicate a new sample */
-	volatile int32_t watermake_reach;
-    //int32_t success;
+	int32_t err;
+	int32_t watermake_reach;
+	int32_t unread_sample;
 	
 	atmel_start_init();
 	lsm303_init(&wire);
 	lsm303_startAcc(AXIS_ENABLE_ALL, ACC_SCALE_2G, ACC_HR_50_HZ);
 	lsm303_startMag(MAG_LP_50_HZ);
-	lsm303_startFIFO();
+	//lsm303_startFIFO();
+	lsm303_stopFIFO();
 	for(;;) { 
-		watermake_reach = lsm303_statusFIFOWTM();
-		while(lsm303_statusFIFOWTM() == 0){}
+		while(lsm303_statusFIFOWTM() == 0){};
+		unread_sample = lsm303_statusFIFOFSS();
+		volatile AxesSI_t xcel[unread_sample];	/* Accelerometer reading */
+		
  		while(lsm303_statusFIFOEMPTY() == 0){
- 			gpio_toggle_pin_level(LED_BUILTIN);
- 			delay_ms(1000);
- 			xcel  = lsm303_getGravity();
-			delay_ms(1000);
- 			gpio_set_pin_level(LED_BUILTIN, false);
-// 			/* Print the data if USB is available */
+  			//lsm303_FIFOread(xcel, unread_sample);
+			/* Print the data if USB is available */
 // 			if(usb_dtr()) {
-// 				err = printAxis(&xcel);
+// 				gpio_set_pin_level(LED_BUILTIN, usb_dtr());
+// 				err = printAxis(xcel);
 // 				if(err < 0) {
 // 					delay_ms(1);
 // 					usb_write("ERROR!\n", 7);

@@ -170,7 +170,7 @@ int32_t lsm303_statusFIFOEMPTY();
 
 int32_t lsm303_statusFIFOFSS();
 
-AxesRaw_t lsm303_FIFOread(const int32_t num_unread);
+int32_t lsm303_FIFOread(AxesRaw_t* buf, const int32_t num_unread);
 
 /** @brief set the rate and enable the magnetometer
  *
