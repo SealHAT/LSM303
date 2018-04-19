@@ -12,7 +12,7 @@ static struct i2c_m_sync_desc lsm303c_sync; /* Structure for IMU communications 
 static ACC_FULL_SCALE_t currentScale = ACC_SCALE_2G;
 static ACC_OPMODE_t     currentMode  = ACC_POWER_DOWN;
 
-/* Read a single register for accelerometer*/
+/* Read a single register for accelerometer */
  static uint8_t readReg(const LSM303_DEV_ADDR_t SLAVE_ADDRESS, const uint8_t REG){
 	uint8_t retval;
 	i2c_m_sync_set_slaveaddr(&lsm303c_sync, SLAVE_ADDRESS, I2C_M_SEVEN);
@@ -97,7 +97,7 @@ int32_t lsm303_startAcc(const IMU_AXIS_t AXIS, const ACC_FULL_SCALE_t RANGE, con
 
 	err |= writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
 	err |= writeReg(LSM303_ACCEL, ACC_CTRL4, reg4);
-	return (err == 0);
+	return err;
 }
 
 int32_t lsm303_stopAcc()
@@ -108,7 +108,7 @@ int32_t lsm303_stopAcc()
     reg1 &= ~(ACC_CTRL1_ODR);
 
     err = writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
-    return (err == 0);
+    return err;
 }
 
 int32_t lsm303_resumeAcc()
@@ -124,7 +124,7 @@ int32_t lsm303_resumeAcc()
     }
 
     err = writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
-    return (err == 0);
+    return err;
 }
 
 int32_t lsm303_startMag(const MAG_OPMODE_t MODE)
@@ -137,7 +137,7 @@ int32_t lsm303_startMag(const MAG_OPMODE_t MODE)
 	err = writeReg(LSM303_MAG, MAG_CFG_A, regA);
 	err = writeReg(LSM303_MAG, MAG_CFG_B, regB);
     err = writeReg(LSM303_MAG, MAG_CFG_C, regC);
-	return (err == 0);
+	return err;
 }
 
 IMU_STATUS_t lsm303_statusAcc()
@@ -207,69 +207,79 @@ AxesRaw_t lsm303_readAcc()
 
 int32_t lsm303_startFIFO()
 {
-	int32_t err  = 0;       // error return for the function
+	int32_t err						= 0;       // error return for the function
+	volatile uint8_t fifoctrl_reg   = readReg(LSM303_ACCEL, ACC_FIFO_CTRL);
 	volatile uint8_t fifoenable_reg = readReg(LSM303_ACCEL, ACC_CTRL5);
-	volatile uint8_t fifoctrl_reg = readReg(LSM303_ACCEL, ACC_FIFO_CTRL);
 	
 	fifoctrl_reg &= (0x20);	//Clear mode and threshold value
 	
+	fifoctrl_reg   |= (ACC_FIFO_STREAM|0x19);	//Set FIFO to stream mode and threshold value to be 25
 	fifoenable_reg |= (ACC_CTRL5_FIFO_EN|ACC_CTRL5_BOOT);	//Enable FIFO
-	fifoctrl_reg |= (ACC_FIFO_STREAM|0x19);	//Set FIFO to stream mode and threshold value to be 25
 	
 	err |= writeReg(LSM303_ACCEL, ACC_CTRL5, fifoenable_reg);	
 	err |= writeReg(LSM303_ACCEL, ACC_FIFO_CTRL, fifoctrl_reg);	
 	
-	return (err == 0);
+	return err;
 }
 
 int32_t lsm303_stopFIFO()
 {
-	int32_t err  = 0;       // error return for the function
-	uint8_t fifoenable_reg = readReg(LSM303_ACCEL, ACC_CTRL5);
+	int32_t err			   = 0;       // error return for the function
+	uint8_t fifoenable_reg = readReg( LSM303_ACCEL, ACC_CTRL5 );
 	
-	fifoenable_reg &= ~(ACC_CTRL5_FIFO_EN|ACC_CTRL5_BOOT);	//Disable FIFO
+	fifoenable_reg &= ~( ACC_CTRL5_FIFO_EN | ACC_CTRL5_BOOT );	//Disable FIFO
 	
 	err |= writeReg(LSM303_ACCEL, ACC_CTRL5, fifoenable_reg);
 	
-	return (err == 0);
+	return err;
 }
 
-int32_t lsm303_statusFIFOWTM() 
+int32_t lsm303_statusFIFO_WATERMARK() 
 {
-	volatile uint8_t wtm;
-	volatile uint8_t statusfifo_reg = readReg(LSM303_ACCEL, ACC_FIFO_SRC);
+	volatile uint8_t statusfifo_reg = 0;
+	statusfifo_reg					= readReg(LSM303_ACCEL, ACC_FIFO_SRC);
 	
-	wtm = (statusfifo_reg&ACC_FIFOSRC_WTM);
-	return (wtm == ACC_FIFOSRC_WTM);
+	return (statusfifo_reg & ACC_FIFOSRC_WTM);
 }
 
-int32_t lsm303_statusFIFOOVRN()
+int32_t lsm303_statusFIFO_OVRN()
+{
+	uint8_t statusfifo_reg = 0;
+	statusfifo_reg		   = readReg(LSM303_ACCEL, ACC_FIFO_SRC);
+	
+	return (statusfifo_reg & ACC_FIFOSRC_OVRN);
+}
+
+int32_t lsm303_statusFIFO_EMPTY()
+{
+	uint8_t statusfifo_reg = 0;
+	statusfifo_reg		   = readReg(LSM303_ACCEL, ACC_FIFO_SRC);
+	return (statusfifo_reg & ACC_FIFOSRC_EMPTY);
+}
+
+int32_t lsm303_statusFIFO_UNREADNUMBER()
 {
 	uint8_t statusfifo_reg = readReg(LSM303_ACCEL, ACC_FIFO_SRC);
-	return (statusfifo_reg&ACC_FIFOSRC_OVRN);
+	return (statusfifo_reg&ACC_FIFOSRC_FSS);
 }
 
-int32_t lsm303_statusFIFOEMPTY()
+int32_t lsm303_FIFOread(AxesRaw_t* buf, const uint32_t buffer_size)
 {
-	volatile uint8_t empty;
-	uint8_t statusfifo_reg = readReg(LSM303_ACCEL, ACC_FIFO_SRC);
-	empty = (statusfifo_reg&ACC_FIFOSRC_EMPTY);
-	return (empty == ACC_FIFOSRC_EMPTY);
-}
-
-int32_t lsm303_statusFIFOFSS()
-{
-	uint8_t statusfifo_reg = readReg(LSM303_ACCEL, ACC_FIFO_SRC);
-	return ((statusfifo_reg&ACC_FIFOSRC_FSS));
-}
-
-int32_t lsm303_FIFOread(AxesRaw_t* buf, const int32_t num_unread)
-{
-	int32_t err  = 0;       // catch error value
-	uint_fast8_t shift = 0; // the shift amount depends on operating mode
-
+	int32_t err			  = 0;       // catch error value
+	uint_fast8_t shift	  = 0; // the shift amount depends on operating mode
+	int32_t	unreadsamples_number	  = 0;
+	int32_t	samples_number	  = 0;
+	
+	unreadsamples_number			  = lsm303_statusFIFO_UNREADNUMBER()+1;
 	// get a new reading of raw data
-	err = readContinous(LSM303_ACCEL, ACC_OUT_X_L, (uint8_t*)buf, num_unread*6);
+	if(buffer_size >= unreadsamples_number){
+		samples_number = unreadsamples_number;
+	}else{
+		samples_number = buffer_size;
+	}
+	
+	err = readContinous(LSM303_ACCEL, ACC_OUT_X_L, (uint8_t*)buf, samples_number*6);
+	
 
 	switch(currentMode) {
 		case ACC_HR_1_HZ:
@@ -303,7 +313,7 @@ int32_t lsm303_FIFOread(AxesRaw_t* buf, const int32_t num_unread)
 		default: err = -1;
 	};
 	
-	for(int i=0; i<num_unread; i++){
+	for(int i=0; i<samples_number; i++){
 		if(err == 0) {
 			buf[i].xAxis >>= shift;
 			buf[i].yAxis >>= shift;
@@ -316,7 +326,54 @@ int32_t lsm303_FIFOread(AxesRaw_t* buf, const int32_t num_unread)
 		}
 	}
 	
-	return (num_unread*6);
+	return (samples_number*6);
+}
+
+int32_t lsm303_ACC_watermarkISR_enable()
+{
+	int32_t err			   = 0;       // error return for the function
+	uint8_t reg3 = readReg( LSM303_ACCEL, ACC_CTRL3 );
+	
+	reg3 |= (ACC_CTRL3_I1_WTM);	//Enable watermark interrupt
+	
+	err |= writeReg(LSM303_ACCEL, ACC_CTRL3, reg3);
+	
+	return err;
+}
+
+int32_t lsm303_ACC_watermarkISR_disable()
+{
+	int32_t err			   = 0;       // error return for the function
+	uint8_t reg3 = readReg( LSM303_ACCEL, ACC_CTRL3 );
+	
+	reg3 &= ~(ACC_CTRL3_I1_WTM);	//Enable watermark interrupt
+	
+	err |= writeReg(LSM303_ACCEL, ACC_CTRL3, reg3);
+	
+	return err;
+}
+
+int32_t lsm303_MAG_DRDYISR_enable()
+{
+	int32_t err		= 0;       // error return for the function
+	uint8_t src_reg = readReg( LSM303_MAG, MAG_INT_SRC );
+	
+	src_reg |= (MAG_INTSRC_INT);	//Disable x,y,z axes and interrupt function
+	err |= writeReg(LSM303_MAG, MAG_INT_SRC, src_reg);
+	
+	return err;
+}
+
+int32_t lsm303_MAG_DRDYISR_disable()
+{
+	int32_t err			   = 0;       // error return for the function
+	uint8_t src_reg = readReg( LSM303_MAG, MAG_INT_SRC );
+	
+	src_reg &= ~(MAG_INTSRC_INT);	//Disable x,y,z axes and interrupt function
+	
+	err |= writeReg(LSM303_MAG, MAG_INT_SRC, src_reg);
+	
+	return err;
 }
 
 AxesRaw_t lsm303_readMag()

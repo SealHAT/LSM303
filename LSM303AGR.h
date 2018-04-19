@@ -162,15 +162,48 @@ int32_t lsm303_startFIFO();
  */
 int32_t lsm303_stopFIFO();
 
-int32_t lsm303_statusFIFOWTM();
+/** @brief Check if Watermark had been reached in FIFO buffer
+ *
+ * @param enabled New enabled state of the FIFO buffer
+ * @return true if successful, false otherwise
+ */
+int32_t lsm303_statusFIFO_WATERMARK();
 
-int32_t lsm303_statusFIFOOVRN();
+/** @brief Check if there is an sample overrun in FIFO buffer
+ *
+ * @param enabled New enabled state of the FIFO buffer
+ * @return true if successful, false otherwise
+ */
+int32_t lsm303_statusFIFO_OVRN();
 
-int32_t lsm303_statusFIFOEMPTY();
+/** @brief Check if FIFO buffer is empty
+ *
+ * @param enabled New enabled state of the FIFO buffer
+ * @return true if successful, false otherwise
+ */
+int32_t lsm303_statusFIFO_EMPTY();
 
-int32_t lsm303_statusFIFOFSS();
+/** @brief Get the number of unread samples in FIFO buffer
+ *
+ * @param enabled New enabled state of the FIFO buffer
+ * @return true if successful, false otherwise
+ */
+int32_t lsm303_statusFIFO_UNREADNUMBER();
 
-int32_t lsm303_FIFOread(AxesRaw_t* buf, const int32_t num_unread);
+/** @brief FIFO multiple read
+ *
+ * @param enabled New enabled state of the FIFO buffer
+ * @return true if successful, false otherwise
+ */
+int32_t lsm303_FIFOread(AxesRaw_t* buf, const uint32_t buffer_size);
+
+int32_t lsm303_ACC_watermarkISR_enable();
+
+int32_t lsm303_ACC_watermarkISR_disable();
+
+int32_t lsm303_MAG_DRDYISR_enable();
+
+int32_t lsm303_MAG_DRDYISR_disable();
 
 /** @brief set the rate and enable the magnetometer
  *
