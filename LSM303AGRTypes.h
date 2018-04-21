@@ -42,6 +42,20 @@ typedef struct {
 	uint8_t reg5;
 } magConfig_t;
 
+#define IMU_STATUS_DRDY     (0x07)
+#define IMU_STATUS_DOVF     (0xF0)
+typedef enum {
+    NULL_STATUS				= 0x00,
+    X_NEW_DATA_AVAILABLE    = 0x01,
+    Y_NEW_DATA_AVAILABLE    = 0x02,
+    Z_NEW_DATA_AVAILABLE    = 0x04,
+    ZYX_NEW_DATA_AVAILABLE  = 0x08,
+    X_OVERRUN               = 0x10,
+    Y_OVERRUN               = 0x20,
+    Z_OVERRUN               = 0x40,
+    ZYX_OVERRUN             = 0x80
+} IMU_STATUS_t;
+
 /***********************************************/
 /***     LSM303C Accelerometer Registers     ***/
 /***********************************************/
