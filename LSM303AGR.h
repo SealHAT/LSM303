@@ -197,12 +197,32 @@ int32_t lsm303_statusFIFO_UNREADNUMBER();
  */
 int32_t lsm303_FIFOread(AxesRaw_t* buf, const uint32_t buffer_size);
 
+/** @brief Enable watermark interrupt
+ *
+ * @param enabled New enabled state of the FIFO buffer
+ * @return true if successful, false otherwise
+ */
 int32_t lsm303_ACC_watermarkISR_enable();
 
+/** @brief Disable watermark interrupt
+ *
+ * @param enabled New enabled state of the FIFO buffer
+ * @return true if successful, false otherwise
+ */
 int32_t lsm303_ACC_watermarkISR_disable();
 
+/** @brief Enable data ready interrupt for magnetometer
+ *
+ * @param enabled New enabled state of the FIFO buffer
+ * @return true if successful, false otherwise
+ */
 int32_t lsm303_MAG_DRDYISR_enable();
 
+/** @brief Disable data ready interrupt for magnetometer
+ *
+ * @param enabled New enabled state of the FIFO buffer
+ * @return true if successful, false otherwise
+ */
 int32_t lsm303_MAG_DRDYISR_disable();
 
 /** @brief set the rate and enable the magnetometer

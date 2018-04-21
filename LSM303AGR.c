@@ -229,6 +229,9 @@ int32_t lsm303_stopFIFO()
 	
 	fifoenable_reg &= ~( ACC_CTRL5_FIFO_EN | ACC_CTRL5_BOOT );	//Disable FIFO
 	
+	
+	//uint8_t reg1 = readReg(LSM303_ACCEL, ACC_CTRL1);
+	//uint8_t reg4 = readReg(LSM303_ACCEL, ACC_CTRL4);
 	err |= writeReg(LSM303_ACCEL, ACC_CTRL5, fifoenable_reg);
 	
 	return err;
