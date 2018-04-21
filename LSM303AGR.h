@@ -160,7 +160,7 @@ int32_t lsm303_resumeMag();
  *
  * @return positive if a new set of data is available, or a system error code.
  */
-int32_t ls303_acc_dataready();
+int32_t lsm303_acc_dataready();
 
 /** @brief Get the status of the magnetometer
  *

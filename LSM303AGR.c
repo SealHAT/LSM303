@@ -74,8 +74,8 @@ static int32_t readContinous(const LSM303_DEV_ADDR_t SLAVE_ADDRESS, uint8_t STAR
 
 int32_t lsm303_init(struct i2c_m_sync_desc *const WIRE)
 {
-	lsm303c_sync  = *WIRE;
-	return i2c_m_sync_enable(&lsm303c_sync);
+  	lsm303c_sync  = *WIRE;
+    return i2c_m_sync_enable(&lsm303c_sync);
 }
 
 int32_t lsm303_startAcc(const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MODE)
@@ -197,7 +197,7 @@ int32_t lsm303_resumeMag()
     return err;
 }
 
-int32_t ls303_acc_dataready(void)
+int32_t lsm303_acc_dataready(void)
 {
     int32_t err = ERR_NONE;     // err return value
     uint8_t statusReg;          // register
@@ -205,7 +205,8 @@ int32_t ls303_acc_dataready(void)
     err = readReg(LSM303_ACCEL, ACC_STATUS, &statusReg);
     if(err != ERR_NONE) { return err; }
 
-    // return overflow error if any data overflow bits are set. this also implies new data.
+    // return overflow error if any data overflow bits are set.
+    // this also implies new data, so we make the error code positive
     if(statusReg & IMU_STATUS_DOVF) {
         return -ERR_OVERFLOW;
     }
@@ -222,7 +223,8 @@ int32_t lsm303_mag_dataready(void)
     err = readReg(LSM303_MAG, MAG_STATUS_REG, &statusReg);
     if(err != ERR_NONE) { return err; }
 
-    // return overflow error if any data overflow bits are set. this also implies new data.
+    // return overflow error if any data overflow bits are set.
+    // this also implies new data, so we make the error code positive
     if(statusReg & IMU_STATUS_DOVF) {
         return -ERR_OVERFLOW;
     }
