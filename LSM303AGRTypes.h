@@ -251,7 +251,7 @@ typedef enum {
 /*****************************************/
 typedef enum {
 	ACC_FIFOCTRL_MODE       = 0xC0,
-    ACC_FIFOCTRL_TRIG       = 0x40,
+    ACC_FIFOCTRL_TRIG       = 0x20,
     ACC_FIFOCTRL_THRESH     = 0x1F
 } ACC_FIFO_CTRL_MASKS_t;
 

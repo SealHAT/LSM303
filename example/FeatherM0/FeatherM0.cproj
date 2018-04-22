@@ -378,7 +378,6 @@
       <Value>../usb/device</Value>
     </ListValues>
   </armgcc.compiler.directories.IncludePaths>
-  <armgcc.compiler.optimization.level>Optimize (-O1)</armgcc.compiler.optimization.level>
   <armgcc.compiler.optimization.PrepareFunctionsForGarbageCollection>True</armgcc.compiler.optimization.PrepareFunctionsForGarbageCollection>
   <armgcc.compiler.optimization.DebugLevel>Maximum (-g3)</armgcc.compiler.optimization.DebugLevel>
   <armgcc.compiler.warnings.AllWarnings>True</armgcc.compiler.warnings.AllWarnings>
@@ -460,6 +459,14 @@
     </ToolchainSettings>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="..\..\analyze.c">
+      <SubType>compile</SubType>
+      <Link>analyze.c</Link>
+    </Compile>
+    <Compile Include="..\..\analyze.h">
+      <SubType>compile</SubType>
+      <Link>analyze.h</Link>
+    </Compile>
     <Compile Include="..\..\LSM303AGR.c">
       <SubType>compile</SubType>
       <Link>LSM303AGR.c</Link>
@@ -471,12 +478,6 @@
     <Compile Include="..\..\LSM303AGRTypes.h">
       <SubType>compile</SubType>
       <Link>LSM303AGRTypes.h</Link>
-    </Compile>
-    <Compile Include="analyze.c">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="analyze.h">
-      <SubType>compile</SubType>
     </Compile>
     <Compile Include="atmel_start.c">
       <SubType>compile</SubType>
