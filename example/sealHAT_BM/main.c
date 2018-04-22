@@ -4,8 +4,8 @@
 #include "analyze.h"
 #include "SerialPrint.h"
 
-#define STRING_SIZE         (64)
-#define BUFFER_SIZE         (15)
+#define STRING_SIZE          (64)
+#define BUFFER_SIZE          (32)
 
 int32_t printAxis(AxesSI_t* reading);
 
@@ -28,27 +28,28 @@ int main(void)
     lsm303_mag_start(MAG_LP_10_HZ);
 
     for(;;) {
+        gpio_toggle_pin_level(LED_RED);
 
         if(gpio_get_pin_level(IMU_INT1_XL)) {
             err = lsm303_acc_FIFOread(xcel, BUFFER_SIZE, &ovflw);
 
             if(err < 0) {
-                gpio_set_pin_level(LED_BUILTIN, true);
+                gpio_set_pin_level(MOD8, true);
                 while(1) {;}
             }
 
             if(ovflw){
-                gpio_set_pin_level(LED_BUILTIN, true);
+                gpio_set_pin_level(MOD9, true);
             }
             else {
-                gpio_set_pin_level(LED_BUILTIN, false);
+                gpio_set_pin_level(MOD9, false);
             }
         }
 
         if(gpio_get_pin_level(IMU_INT_MAG)) {
             err = lsm303_mag_rawRead(&mag);
             if(err != ERR_NONE) {
-                gpio_set_pin_level(LED_BUILTIN, true);
+                gpio_set_pin_level(MOD2, true);
                 while(1) {;}
             }
         }
