@@ -3,21 +3,21 @@
  *
  * Created: 2/23/2018 2:56:23 PM
  *  Author: hpan5
- */ 
+ */
 #include "LSM303AGR.h"
 #include "LSM303AGRTypes.h"
 #include "math.h"
 
 static struct i2c_m_sync_desc lsm303c_sync; /* Structure for IMU communications */
-static ACC_FULL_SCALE_t currentScale = ACC_SCALE_2G;
-static ACC_OPMODE_t     currentMode  = ACC_POWER_DOWN;
+static ACC_FULL_SCALE_t currentScale    = ACC_SCALE_2G;
+static ACC_OPMODE_t     currentAccMode  = ACC_POWER_DOWN;
+static MAG_OPMODE_t     currentMagMode  = MAG_IDLE;
 
-/* Read a single register for accelerometer */
- static uint8_t readReg(const LSM303_DEV_ADDR_t SLAVE_ADDRESS, const uint8_t REG){
-	uint8_t retval;
+/* Read a single register for accelerometer*/
+static int32_t readReg(const LSM303_DEV_ADDR_t SLAVE_ADDRESS, const uint8_t REG, uint8_t* dest)
+{
 	i2c_m_sync_set_slaveaddr(&lsm303c_sync, SLAVE_ADDRESS, I2C_M_SEVEN);
-	i2c_m_sync_cmd_read(&lsm303c_sync, REG, &retval, 1);
-	return retval;
+	return i2c_m_sync_cmd_read(&lsm303c_sync, REG, dest, 1);
 }
 
 /* @brief Read a single register
@@ -40,126 +40,196 @@ static ACC_OPMODE_t     currentMode  = ACC_POWER_DOWN;
 	uint8_t buff[2];
 	buff[0] = Reg;
 	buff[1] = val;
-	
+
 	msg.addr   = SLAVE_ADDRESS;
 	msg.len    = 2;
 	msg.flags  = I2C_M_STOP;
 	msg.buffer = buff;
-	
-	return _i2c_m_sync_transfer(&lsm303c_sync.device, &msg);
+
+    return _i2c_m_sync_transfer(&lsm303c_sync.device, &msg);
 }
 
-static uint32_t readContinous(const LSM303_DEV_ADDR_t SLAVE_ADDRESS, uint8_t STARTING_REG, uint8_t* buf, const uint32_t LEN)
+static int32_t readContinous(const LSM303_DEV_ADDR_t SLAVE_ADDRESS, uint8_t STARTING_REG, uint8_t* buf, const uint32_t LEN)
 {
-	uint32_t retval = I2C_ERR_BAD_ADDRESS;
-	struct _i2c_m_msg msg;
+	struct  _i2c_m_msg msg;
+    int32_t err;        // error return value
 
     STARTING_REG |= 0x80;
-	
+
 	msg.addr   = SLAVE_ADDRESS;
 	msg.len    = 1;
 	msg.flags  = 0;
 	msg.buffer = (uint8_t*)&STARTING_REG;
-	
-	retval = _i2c_m_sync_transfer(&lsm303c_sync.device, &msg);
-	
+
+	err = _i2c_m_sync_transfer(&lsm303c_sync.device, &msg);
+    if(err != ERR_NONE) { return err; }
+
 	msg.addr   = SLAVE_ADDRESS;
 	msg.len    = LEN;
 	msg.flags  = I2C_M_RD | I2C_M_STOP;
 	msg.buffer = buf;
-	
-	retval = _i2c_m_sync_transfer(&lsm303c_sync.device, &msg);
 
-	return retval;
+	return _i2c_m_sync_transfer(&lsm303c_sync.device, &msg);
 }
 
 int32_t lsm303_init(struct i2c_m_sync_desc *const WIRE)
 {
-	lsm303c_sync  = *WIRE;
-	i2c_m_sync_enable(&lsm303c_sync);
-
-	return true;
+  	lsm303c_sync  = *WIRE;
+    return i2c_m_sync_enable(&lsm303c_sync);
 }
 
-int32_t lsm303_startAcc(const IMU_AXIS_t AXIS, const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MODE)
+int32_t lsm303_startAcc(const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MODE)
 {
-	int32_t err  = 0;       // error return for the function
+    int32_t err;        // error return value
 
     // set the ODR, LPen bit, and enabled axis in register 1
-    uint8_t reg1 = (MODE & 0xF8) | AXIS;
+    uint8_t reg1 = (MODE & 0xF8) | ACC_ENABLE_ALL;
 
     // set the HR bit mode in register 4 with bit #2 of the MODE parameter
 	uint8_t reg4 = (MODE & 0x04) << 1;
     reg4 |= (ACC_CTRL4_BDU | RANGE);
 
-	currentScale = RANGE;
-    currentMode  = MODE;
+	currentScale    = RANGE;
+    currentAccMode  = MODE;
 
-	err |= writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
-	err |= writeReg(LSM303_ACCEL, ACC_CTRL4, reg4);
-	return err;
+	err = writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
+    if(err == ERR_NONE) {
+        err = writeReg(LSM303_ACCEL, ACC_CTRL4, reg4);
+    }
+    return err;
 }
 
 int32_t lsm303_stopAcc()
 {
-    int32_t err  = 0;       // error return for the function
-    uint8_t reg1 = readReg(LSM303_ACCEL, ACC_CTRL1);
+    int32_t err;        // error return for the function
+    uint8_t reg1;       // hold the first control register
+
+    err = readReg(LSM303_ACCEL, ACC_CTRL1, &reg1);
+    if(err != ERR_NONE) { return err; }
 
     reg1 &= ~(ACC_CTRL1_ODR);
 
-    err = writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
-    return err;
+    return writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
 }
 
 int32_t lsm303_resumeAcc()
 {
-    int32_t err  = 0;       // error return for the function
-    uint8_t reg1 = readReg(LSM303_ACCEL, ACC_CTRL1);
+    int32_t err;       // error return for the function
+    uint8_t reg1;      // holds register value
 
-    if(currentMode == ACC_POWER_DOWN) {
-        lsm303_startAcc(AXIS_ENABLE_ALL, ACC_SCALE_2G, ACC_HR_50_HZ);
+    if(currentAccMode == ACC_POWER_DOWN) {
+        err = lsm303_startAcc(ACC_SCALE_2G, ACC_HR_50_HZ);
     }
     else {
+        err = readReg(LSM303_ACCEL, ACC_CTRL1, &reg1);
+        if(err != ERR_NONE) { return err; }
+
         reg1 &= ~(ACC_CTRL1_ODR);
+
+        err = writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
     }
 
-    err = writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
     return err;
 }
 
 int32_t lsm303_startMag(const MAG_OPMODE_t MODE)
 {
-	int32_t err  = 0;       // error return for the function
-	uint8_t regA = MAG_TEMPCOMP_ENABLE | (MODE & 0x1F);
+	int32_t err  = ERR_NONE;        // err return value
+
+    uint8_t regA = MAG_TEMPCOMP_ENABLE | (MODE & 0x1F);
     uint8_t regB = MAG_CFGB_LOWPASS_EN;
     uint8_t regC = MAG_CFGC_BDU | MAG_CFGC_INT_MAG;
 
-	err = writeReg(LSM303_MAG, MAG_CFG_A, regA);
-	err = writeReg(LSM303_MAG, MAG_CFG_B, regB);
-    err = writeReg(LSM303_MAG, MAG_CFG_C, regC);
+    currentMagMode = MODE;
+
+	err |= writeReg(LSM303_MAG, MAG_CFG_A, regA);
+	err |= writeReg(LSM303_MAG, MAG_CFG_B, regB);
+    err |= writeReg(LSM303_MAG, MAG_CFG_C, regC);
 	return err;
 }
 
-IMU_STATUS_t lsm303_statusAcc()
+int32_t lsm303_stopMag()
 {
-	return (IMU_STATUS_t)readReg(LSM303_ACCEL, ACC_STATUS);
+    int32_t err;        // error return for the function
+    uint8_t regA;       // hold the control register
+
+    err = readReg(LSM303_MAG, MAG_CFG_A, &regA);
+    if(err != ERR_NONE) { return err; }
+
+    // no need to clear first, idle is set when both mode bits are high
+    regA |= MAG_MODE_IDLE;
+
+    return writeReg(LSM303_MAG, MAG_CFG_A, regA);
 }
 
-IMU_STATUS_t lsm303_statusMag()
+int32_t lsm303_resumeMag()
 {
-	return (IMU_STATUS_t)readReg(LSM303_MAG, MAG_STATUS_REG);
+    int32_t err;       // error return for the function
+    uint8_t regA;      // holds register value
+
+    if(currentMagMode == MAG_IDLE) {
+        err = lsm303_startMag(MAG_LP_20_HZ);
+    }
+    else {
+        err = readReg(LSM303_MAG, MAG_CFG_A, &regA);
+        if(err != ERR_NONE) { return err; }
+
+        // clear and set
+        regA &= ~(MAG_CFGA_MD | MAG_CFGA_LP);
+        regA |= currentMagMode;
+
+        err = writeReg(LSM303_MAG, MAG_CFG_A, regA);
+    }
+
+    return err;
+}
+
+int32_t lsm303_acc_dataready(void)
+{
+    int32_t err;            // err return value
+    uint8_t statusReg;      // register
+
+    err = readReg(LSM303_ACCEL, ACC_STATUS, &statusReg);
+    if(err != ERR_NONE) { return err; }
+
+    // return overflow error if any data overflow bits are set.
+    // this also implies new data, so we make the error code positive
+    if(statusReg & IMU_STATUS_DOVF) {
+        return -ERR_OVERFLOW;
+    }
+
+    // return the ZYX DRDY bit, this will be a positive true value but not 1
+    return (statusReg & ZYX_NEW_DATA_AVAILABLE);
+}
+
+int32_t lsm303_mag_dataready(void)
+{
+    int32_t err;            // err return value
+    uint8_t statusReg;      // register
+
+    err = readReg(LSM303_MAG, MAG_STATUS_REG, &statusReg);
+    if(err != ERR_NONE) { return err; }
+
+    // return overflow error if any data overflow bits are set.
+    // this also implies new data, so we make the error code positive
+    if(statusReg & IMU_STATUS_DOVF) {
+        return -ERR_OVERFLOW;
+    }
+
+    // return the ZYX DRDY bit, this will be a positive true value but not 1
+    return (statusReg & ZYX_NEW_DATA_AVAILABLE);
 }
 
 AxesRaw_t lsm303_readAcc()
 {
-    int32_t err  = 0;       // catch error value
-    uint_fast8_t shift = 0; // the shift amount depends on operating mode 
-	AxesRaw_t Axes;         // the return value
+    int32_t err;                    // catch error value
+    uint_fast8_t shift = 0;         // the shift amount depends on operating mode
+	AxesRaw_t Axes;                 // the return value
 
     // get a new reading of raw data
 	err = readContinous(LSM303_ACCEL, ACC_OUT_X_L, (uint8_t*)&Axes, 6);
 
-    switch(currentMode) {
+    switch(currentAccMode) {
         case ACC_HR_1_HZ:
         case ACC_HR_10_HZ:
         case ACC_HR_25_HZ:
@@ -188,10 +258,10 @@ AxesRaw_t lsm303_readAcc()
         case ACC_LP_1620_HZ:
         case ACC_LP_5376_HZ: shift = 8;
                              break;
-        default: err = -1;
+        default: err = ERR_INVALID_ARG;
     };
-	
-    if(err == 0) {
+
+    if(err == ERR_NONE) {
         Axes.xAxis >>= shift;
         Axes.yAxis >>= shift;
         Axes.zAxis >>= shift;
@@ -210,15 +280,15 @@ int32_t lsm303_startFIFO()
 	int32_t err						= 0;       // error return for the function
 	volatile uint8_t fifoctrl_reg   = readReg(LSM303_ACCEL, ACC_FIFO_CTRL);
 	volatile uint8_t fifoenable_reg = readReg(LSM303_ACCEL, ACC_CTRL5);
-	
+
 	fifoctrl_reg &= (0x20);	//Clear mode and threshold value
-	
+
 	fifoctrl_reg   |= (ACC_FIFO_STREAM|0x19);	//Set FIFO to stream mode and threshold value to be 25
 	fifoenable_reg |= (ACC_CTRL5_FIFO_EN|ACC_CTRL5_BOOT);	//Enable FIFO
-	
-	err |= writeReg(LSM303_ACCEL, ACC_CTRL5, fifoenable_reg);	
-	err |= writeReg(LSM303_ACCEL, ACC_FIFO_CTRL, fifoctrl_reg);	
-	
+
+	err |= writeReg(LSM303_ACCEL, ACC_CTRL5, fifoenable_reg);
+	err |= writeReg(LSM303_ACCEL, ACC_FIFO_CTRL, fifoctrl_reg);
+
 	return err;
 }
 
@@ -226,22 +296,22 @@ int32_t lsm303_stopFIFO()
 {
 	int32_t err			   = 0;       // error return for the function
 	uint8_t fifoenable_reg = readReg( LSM303_ACCEL, ACC_CTRL5 );
-	
+
 	fifoenable_reg &= ~( ACC_CTRL5_FIFO_EN | ACC_CTRL5_BOOT );	//Disable FIFO
-	
-	
+
+
 	//uint8_t reg1 = readReg(LSM303_ACCEL, ACC_CTRL1);
 	//uint8_t reg4 = readReg(LSM303_ACCEL, ACC_CTRL4);
 	err |= writeReg(LSM303_ACCEL, ACC_CTRL5, fifoenable_reg);
-	
+
 	return err;
 }
 
-int32_t lsm303_statusFIFO_WATERMARK() 
+int32_t lsm303_statusFIFO_WATERMARK()
 {
 	volatile uint8_t statusfifo_reg = 0;
 	statusfifo_reg					= readReg(LSM303_ACCEL, ACC_FIFO_SRC);
-	
+
 	return (statusfifo_reg & ACC_FIFOSRC_WTM);
 }
 
@@ -249,7 +319,7 @@ int32_t lsm303_statusFIFO_OVRN()
 {
 	uint8_t statusfifo_reg = 0;
 	statusfifo_reg		   = readReg(LSM303_ACCEL, ACC_FIFO_SRC);
-	
+
 	return (statusfifo_reg & ACC_FIFOSRC_OVRN);
 }
 
@@ -268,11 +338,11 @@ int32_t lsm303_statusFIFO_UNREADNUMBER()
 
 int32_t lsm303_FIFOread(AxesRaw_t* buf, const uint32_t buffer_size)
 {
-	int32_t err			  = 0;       // catch error value
-	uint_fast8_t shift	  = 0; // the shift amount depends on operating mode
-	int32_t	unreadsamples_number	  = 0;
-	int32_t	samples_number	  = 0;
-	
+	int32_t err			         = 0; // catch error value
+	uint_fast8_t shift	         = 0; // the shift amount depends on operating mode
+	int32_t	unreadsamples_number = 0;
+	int32_t	samples_number	     = 0;
+
 	unreadsamples_number			  = lsm303_statusFIFO_UNREADNUMBER()+1;
 	// get a new reading of raw data
 	if(buffer_size >= unreadsamples_number){
@@ -280,9 +350,9 @@ int32_t lsm303_FIFOread(AxesRaw_t* buf, const uint32_t buffer_size)
 	}else{
 		samples_number = buffer_size;
 	}
-	
+
 	err = readContinous(LSM303_ACCEL, ACC_OUT_X_L, (uint8_t*)buf, samples_number*6);
-	
+
 
 	switch(currentMode) {
 		case ACC_HR_1_HZ:
@@ -315,7 +385,7 @@ int32_t lsm303_FIFOread(AxesRaw_t* buf, const uint32_t buffer_size)
 		break;
 		default: err = -1;
 	};
-	
+
 	for(int i=0; i<samples_number; i++){
 		if(err == 0) {
 			buf[i].xAxis >>= shift;
@@ -328,7 +398,7 @@ int32_t lsm303_FIFOread(AxesRaw_t* buf, const uint32_t buffer_size)
 			buf[i].zAxis = 0xFF;
 		}
 	}
-	
+
 	return (samples_number*6);
 }
 
@@ -336,11 +406,11 @@ int32_t lsm303_ACC_watermarkISR_enable()
 {
 	int32_t err			   = 0;       // error return for the function
 	uint8_t reg3 = readReg( LSM303_ACCEL, ACC_CTRL3 );
-	
-	reg3 |= (ACC_CTRL3_I1_WTM);	//Enable watermark interrupt
-	
+
+	reg3 |= (ACC_CTRL3_I1_WTM);       //Enable watermark interrupt
+
 	err |= writeReg(LSM303_ACCEL, ACC_CTRL3, reg3);
-	
+
 	return err;
 }
 
@@ -348,11 +418,11 @@ int32_t lsm303_ACC_watermarkISR_disable()
 {
 	int32_t err			   = 0;       // error return for the function
 	uint8_t reg3 = readReg( LSM303_ACCEL, ACC_CTRL3 );
-	
-	reg3 &= ~(ACC_CTRL3_I1_WTM);	//Enable watermark interrupt
-	
+
+	reg3 &= ~(ACC_CTRL3_I1_WTM);	  //Enable watermark interrupt
+
 	err |= writeReg(LSM303_ACCEL, ACC_CTRL3, reg3);
-	
+
 	return err;
 }
 
@@ -360,10 +430,10 @@ int32_t lsm303_MAG_DRDYISR_enable()
 {
 	int32_t err		= 0;       // error return for the function
 	uint8_t src_reg = readReg( LSM303_MAG, MAG_INT_SRC );
-	
+
 	src_reg |= (MAG_INTSRC_INT);	//Disable x,y,z axes and interrupt function
 	err |= writeReg(LSM303_MAG, MAG_INT_SRC, src_reg);
-	
+
 	return err;
 }
 
@@ -371,42 +441,48 @@ int32_t lsm303_MAG_DRDYISR_disable()
 {
 	int32_t err			   = 0;       // error return for the function
 	uint8_t src_reg = readReg( LSM303_MAG, MAG_INT_SRC );
-	
+
 	src_reg &= ~(MAG_INTSRC_INT);	//Disable x,y,z axes and interrupt function
-	
+
 	err |= writeReg(LSM303_MAG, MAG_INT_SRC, src_reg);
-	
+
 	return err;
 }
 
 AxesRaw_t lsm303_readMag()
 {
+    int32_t err;
 	AxesRaw_t Axes;
-	readContinous(LSM303_MAG, MAG_OUTX_L, (uint8_t*)&Axes, 6);
-	return Axes;
+
+    err = readContinous(LSM303_MAG, MAG_OUTX_L, (uint8_t*)&Axes, 6);
+
+    return Axes;
 }
 
 // TODO - enable temp readings in a function, and read them correctly
 int16_t lsm303_readTemp()
 {
+    int32_t err;
 	int16_t temperature;
-	readContinous(LSM303_ACCEL, ACC_TEMP_L, (uint8_t*)&temperature, 2);
-	return temperature;
+
+	err = readContinous(LSM303_ACCEL, ACC_TEMP_L, (uint8_t*)&temperature, 2);
+
+    return temperature;
 }
 
 AxesSI_t lsm303_getGravity()
 {
-    // different Scales, there are 3 modes and 4 full scale settings. these are mg/LSB values from datasheet page 13.
+    // different Scales, there are 3 modes and 4 full scale settings. these are mg/LSB values from data sheet page 13.
 	static const float scale[3][4] = {{0.98, 1.95, 3.9, 11.72},
                                       {3.9, 7.82, 15.63, 46.9},
                                       {15.63, 31.26, 62.52, 187.58}};
     int i,j;                            // index for the array above
 	AxesSI_t  results;                  // stores the results of the reading
-	
+
     // get a new reading
     AxesRaw_t accel = lsm303_readAcc();
 
-    switch(currentMode) {
+    switch(currentAccMode) {
         case ACC_HR_1_HZ:
         case ACC_HR_10_HZ:
         case ACC_HR_25_HZ:
@@ -449,7 +525,7 @@ AxesSI_t lsm303_getGravity()
     	break;
     	default: j = 4;
 	};
-	
+
     // return error value if the index are out of range
     if(i >= 3 || j >= 4 || accel.xAxis == 0xFF) {
         results.xAxis = NAN;
@@ -462,7 +538,7 @@ AxesSI_t lsm303_getGravity()
 	results.xAxis = ( accel.xAxis * scale[i][j] / 1000.0);
 	results.yAxis = ( accel.yAxis * scale[i][j] / 1000.0);
 	results.zAxis = ( accel.zAxis * scale[i][j] / 1000.0);
-	
+
 	return results;
 }
 
@@ -470,10 +546,10 @@ AxesSI_t lsm303_getGauss()
 {
 	AxesSI_t  results;
 	AxesRaw_t mag = lsm303_readMag();
-	
+
 	results.xAxis = (mag.xAxis * 1.5 / 1000.0);
 	results.yAxis = (mag.yAxis * 1.5 / 1000.0);
 	results.zAxis = (mag.zAxis * 1.5 / 1000.0);
-	
+
 	return results;
 }
