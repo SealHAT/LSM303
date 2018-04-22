@@ -4,125 +4,61 @@
 #include "analyze.h"
 #include "SerialPrint.h"
 
-#define STRING_SIZE (64)
-#define buffersize (15)
+#define STRING_SIZE         (64)
+#define BUFFER_SIZE         (15)
+
 int32_t printAxis(AxesSI_t* reading);
 
 int main(void)
 {
-<<<<<<< HEAD
-	AxesRaw_t xcel[buffersize];	/* Accelerometer reading */
-	AxesRaw_t oxcel[buffersize];	/* Accelerometer reading */
-//	AxesSI_t xcel;
-	AxesSI_t mag;					/* Magnetometer reading */
-	//int16_t   temp;				    /* Magnetometer temperature */
-	IMU_STATUS_t newAcc, newMag;	/* Indicate a new sample */
-	int32_t err;
-	//int32_t watermake_reach;
-	volatile int32_t data_readnum;
-	
-	
-	atmel_start_init();
-	lsm303_init(&wire);
-	lsm303_startAcc(AXIS_ENABLE_ALL, ACC_SCALE_2G, ACC_HR_50_HZ);
-	lsm303_startMag(MAG_LP_50_HZ);
-	//lsm303_startFIFO();
-	lsm303_stopFIFO();
-=======
-	AxesSI_t xcel;					/* Accelerometer reading */
-	//AxesSI_t mag;					/* Magnetometer reading */
-	//int16_t   temp;				    /* Magnetometer temperature */
-    int32_t err;
-	
-	atmel_start_init();
-	lsm303_init(&wire);
-	lsm303_startAcc(ACC_SCALE_2G, ACC_HR_50_HZ);
-	lsm303_startMag(MAG_LP_20_HZ);
-	for(;;) {
+    AxesRaw_t xcel[BUFFER_SIZE];	    // Accelerometer reading
+    AxesRaw_t mag;					    // Magnetometer  reading
+    int32_t   err;                      // error code catcher
+    bool      ovflw;                    // catch overflows
 
-		/* Read and print the Accelerometer if it is ready */
-		if(ls303_acc_dataready()) {
-            gpio_set_pin_level(LED_BUILTIN, true);
-            lsm303_getGravity(&xcel);
-            gpio_set_pin_level(LED_BUILTIN, false);
-			/* Print the data if USB is available */
-			if(usb_dtr()) {
-				err = printAxis(&xcel);
-                if(err < 0) {
-                    delay_ms(1);
-                    usb_write("ERROR!\n", 7);
-                } // USB ERROR
-			} // USB DTR ON
-		} // NEW ACCEL
->>>>>>> 18a3c67fc2774a7e9c53ed0d75db3c47198564d8
-	
-	for(;;) { 
-		while(lsm303_statusFIFO_WATERMARK() == 0)
-		{
-			newAcc = lsm303_statusAcc();
-		
-			data_readnum = lsm303_FIFOread(oxcel, buffersize);
-			newAcc = lsm303_statusAcc();
-		};
- 		while((lsm303_statusFIFO_EMPTY() == 0)){
- 				 data_readnum = lsm303_FIFOread(xcel, buffersize);
- 				gpio_set_pin_level(LED_BUILTIN, true);
- 			 }
-// 			 if(lsm303_statusFIFO_EMPTY() == 0){
-//   			data_readnum = lsm303_FIFOread(xcel, buffersize);
-// 			 }
-			/* Print the data if USB is available */
-// 			if(usb_dtr()) {
-// 				gpio_set_pin_level(LED_BUILTIN, usb_dtr());
-// 				err = printAxis(xcel);
-// 				if(err < 0) {
-// 					delay_ms(1);
-// 					usb_write("ERROR!\n", 7);
-// 				} // USB ERROR
-// 			} // USB DTR ON
- 		//}
-// 		
-	//gpio_set_pin_level(LED_BUILTIN, false);
-// 	/* Read and print the Magnetometer if it is ready */
-// 	newMag = lsm303_statusMag();
-// 	if(newMag != NULL_STATUS) {
-// 		gpio_set_pin_level(LED_BUILTIN, true);
-// 		mag  = lsm303_getGauss();
-// 		gpio_set_pin_level(LED_BUILTIN, false);
-// 		/* Print the data if USB is available */
-// 		if(usb_dtr()) {
-// 			err = printAxis(&mag);
-// 			if(err < 0) {
-// 				delay_ms(1);
-// 				usb_write("ERROR!\n", 7);
-// 			} // USB ERROR
-// 		} // USB DTR ON
-// 	} // NEW MAG
-	
-	} // FOREVER
+    atmel_start_init();
+
+    // initialize the I2C for the IMU
+    lsm303_init(&I2C_IMU);
+
+    // start the IMU in FIFO mode with the appropriate scale and rate
+    lsm303_acc_startFIFO(ACC_SCALE_2G, ACC_HR_50_HZ);
+
+    // start the magnetometer at the given rate
+    lsm303_mag_start(MAG_LP_10_HZ);
+
+    for(;;) {
+
+        if(gpio_get_pin_level(IMU_INT1_XL)) {
+            err = lsm303_acc_FIFOread(xcel, BUFFER_SIZE, &ovflw);
+
+            if(err < 0) {
+                gpio_set_pin_level(LED_BUILTIN, true);
+                while(1) {;}
+            }
+
+            if(ovflw){
+                gpio_set_pin_level(LED_BUILTIN, true);
+            }
+            else {
+                gpio_set_pin_level(LED_BUILTIN, false);
+            }
+        }
+
+        if(gpio_get_pin_level(IMU_INT_MAG)) {
+            err = lsm303_mag_rawRead(&mag);
+            if(err != ERR_NONE) {
+                gpio_set_pin_level(LED_BUILTIN, true);
+                while(1) {;}
+            }
+        }
+    } // FOREVER
 }
 
-/////////////////////////////
-// 		/* Read and print the Accelerometer if it is ready */
-// 		newAcc = lsm303_statusAcc();
-// 		if(newAcc & ZYX_NEW_DATA_AVAILABLE) {
-// 			gpio_set_pin_level(LED_BUILTIN, true);
-// 			xcel  = lsm303_getGravity();
-// 			gpio_set_pin_level(LED_BUILTIN, false);
-// 			/* Print the data if USB is available */
-// 			if(usb_dtr()) {
-// 				err = printAxis(&xcel);
-// 				if(err < 0) {
-// 					delay_ms(1);
-// 					usb_write("ERROR!\n", 7);
-// 				} // USB ERROR
-// 			} // USB DTR ON
-// 		} // NEW ACCEL
-/////////////////////////////////////////////////////
 static int ftostr(double number, uint8_t digits, char* buff, const int LEN) {
     uint8_t i;
     size_t n = 0;
-    
+
     // Not a number, special floating point value
     if (isnan(number)) {
         n = snprintf(buff, LEN, "nan");
@@ -163,16 +99,16 @@ static int ftostr(double number, uint8_t digits, char* buff, const int LEN) {
         if (digits > 0) {
             buff[n] = '.';
             buff[++n] = '\0';
-            
+
             // Extract digits from the remainder one at a time
             while (digits-- > 0) {
                 // calculate the current digit
                 remainder *= 10.0;
                 unsigned int toPrint = (unsigned int)remainder;
-                
+
                 // overwrite the last null terminator with the current digit
                 n += snprintf(&buff[n], LEN-n, "%d", toPrint);
-                
+
                 // shift to the next digit
                 remainder -= toPrint;
             }
@@ -190,7 +126,7 @@ int32_t printAxis(AxesSI_t* reading) {
     output[n++] = ',';
     n += ftostr(reading->yAxis, 3, &output[n], STRING_SIZE - n);
     output[n++] = ',';
-    n += ftostr(reading->zAxis, 3, &output[n], STRING_SIZE - n);   
+    n += ftostr(reading->zAxis, 3, &output[n], STRING_SIZE - n);
     output[n++] = '\n';
     return usb_write(output, n);
 }

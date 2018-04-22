@@ -459,6 +459,14 @@
     </ToolchainSettings>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="..\..\analyze.c">
+      <SubType>compile</SubType>
+      <Link>analyze.c</Link>
+    </Compile>
+    <Compile Include="..\..\analyze.h">
+      <SubType>compile</SubType>
+      <Link>analyze.h</Link>
+    </Compile>
     <Compile Include="..\..\LSM303AGR.c">
       <SubType>compile</SubType>
       <Link>LSM303AGR.c</Link>
@@ -470,12 +478,6 @@
     <Compile Include="..\..\LSM303AGRTypes.h">
       <SubType>compile</SubType>
       <Link>LSM303AGRTypes.h</Link>
-    </Compile>
-    <Compile Include="analyze.c">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="analyze.h">
-      <SubType>compile</SubType>
     </Compile>
     <Compile Include="atmel_start.c">
       <SubType>compile</SubType>

@@ -78,9 +78,12 @@ int32_t lsm303_init(struct i2c_m_sync_desc *const WIRE)
     return i2c_m_sync_enable(&lsm303c_sync);
 }
 
-int32_t lsm303_startAcc(const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MODE)
+int32_t lsm303_acc_startBypass(const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MODE)
 {
     int32_t err;        // error return value
+
+    // reboot accelerometer memory contents
+    err = writeReg(LSM303_ACCEL, ACC_CTRL5, ACC_CTRL5_BOOT);
 
     // set the ODR, LPen bit, and enabled axis in register 1
     uint8_t reg1 = (MODE & 0xF8) | ACC_ENABLE_ALL;
@@ -92,14 +95,54 @@ int32_t lsm303_startAcc(const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MODE)
 	currentScale    = RANGE;
     currentAccMode  = MODE;
 
-	err = writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
-    if(err == ERR_NONE) {
-        err = writeReg(LSM303_ACCEL, ACC_CTRL4, reg4);
-    }
+    // write the control registers
+    err = writeReg(LSM303_ACCEL, ACC_CTRL3, ACC_CTRL3_I1_DRDY1);
+    if(err < 0) { return err; }
+
+    err = writeReg(LSM303_ACCEL, ACC_CTRL4, reg4);
+    if(err < 0) { return err; }
+
+    err = writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
     return err;
 }
 
-int32_t lsm303_stopAcc()
+int32_t lsm303_acc_startFIFO(const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MODE)
+{
+    int32_t err;        // error return value
+
+    // reboot accelerometer memory contents
+    err = writeReg(LSM303_ACCEL, ACC_CTRL5, ACC_CTRL5_BOOT);
+    if(err < 0) { return err; }
+
+    // set the HR bit mode in register 4 with bit #2 of the MODE parameter
+	uint8_t reg4 = (MODE & 0x04) << 1;
+    reg4 |= (ACC_CTRL4_BDU | RANGE);
+
+    err = writeReg(LSM303_ACCEL, ACC_CTRL4, reg4);
+    if(err < 0) { return err; }
+
+    // enable the FIFO
+    err = writeReg(LSM303_ACCEL, ACC_CTRL5, ACC_CTRL5_FIFO_EN);
+    if(err < 0) { return err; }
+
+    // set FIFO watermark to 25 and set to stream mode
+    err = writeReg(LSM303_ACCEL, ACC_FIFO_CTRL, (ACC_FIFO_STREAM|0x19));
+    if(err < 0) { return err; }
+
+    // set watermark interrupt on pin 1
+    err = writeReg(LSM303_ACCEL, ACC_CTRL3, ACC_CTRL3_I1_WTM);
+    if(err < 0) { return err; }
+
+    // set the ODR, LPen bit, and enabled axis in register 1
+    err = writeReg(LSM303_ACCEL, ACC_CTRL1, (MODE & 0xF8) | ACC_ENABLE_ALL);
+
+	currentScale    = RANGE;
+    currentAccMode  = MODE;
+
+    return err;
+}
+
+int32_t lsm303_acc_stop(void)
 {
     int32_t err;        // error return for the function
     uint8_t reg1;       // hold the first control register
@@ -112,43 +155,32 @@ int32_t lsm303_stopAcc()
     return writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
 }
 
-int32_t lsm303_resumeAcc()
+int32_t lsm303_mag_start(const MAG_OPMODE_t MODE)
 {
-    int32_t err;       // error return for the function
-    uint8_t reg1;      // holds register value
+	int32_t err;        // err return value
 
-    if(currentAccMode == ACC_POWER_DOWN) {
-        err = lsm303_startAcc(ACC_SCALE_2G, ACC_HR_50_HZ);
-    }
-    else {
-        err = readReg(LSM303_ACCEL, ACC_CTRL1, &reg1);
-        if(err != ERR_NONE) { return err; }
+    // reset the magnetometer memories then wait for restart
+    err = writeReg(LSM303_MAG, MAG_CFG_A, MAG_CFGA_SOFTRST);
+    if(err < 0) { return err; }
+    delay_ms(5);
 
-        reg1 &= ~(ACC_CTRL1_ODR);
+    // set BDU and enable interrupt
+    err = writeReg(LSM303_MAG, MAG_CFG_C, (MAG_CFGC_BDU | MAG_CFGC_INT_MAG) );
+    if(err < 0) { return err; }
 
-        err = writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
-    }
+    // enable low pass filter
+    err |= writeReg(LSM303_MAG, MAG_CFG_B, 0x00 /* MAG_CFGB_LOWPASS_EN */);
+    if(err < 0) { return err; }
 
-    return err;
-}
-
-int32_t lsm303_startMag(const MAG_OPMODE_t MODE)
-{
-	int32_t err  = ERR_NONE;        // err return value
-
-    uint8_t regA = MAG_TEMPCOMP_ENABLE | (MODE & 0x1F);
-    uint8_t regB = MAG_CFGB_LOWPASS_EN;
-    uint8_t regC = MAG_CFGC_BDU | MAG_CFGC_INT_MAG;
+    // enable temperature compensation and set the mode and rate
+    err |= writeReg(LSM303_MAG, MAG_CFG_A, (MAG_TEMPCOMP_ENABLE | (MODE & 0x1F)) );
+    if(err < 0) { return err; }
 
     currentMagMode = MODE;
-
-	err |= writeReg(LSM303_MAG, MAG_CFG_A, regA);
-	err |= writeReg(LSM303_MAG, MAG_CFG_B, regB);
-    err |= writeReg(LSM303_MAG, MAG_CFG_C, regC);
 	return err;
 }
 
-int32_t lsm303_stopMag()
+int32_t lsm303_mag_stop(void)
 {
     int32_t err;        // error return for the function
     uint8_t regA;       // hold the control register
@@ -162,27 +194,6 @@ int32_t lsm303_stopMag()
     return writeReg(LSM303_MAG, MAG_CFG_A, regA);
 }
 
-int32_t lsm303_resumeMag()
-{
-    int32_t err;       // error return for the function
-    uint8_t regA;      // holds register value
-
-    if(currentMagMode == MAG_IDLE) {
-        err = lsm303_startMag(MAG_LP_20_HZ);
-    }
-    else {
-        err = readReg(LSM303_MAG, MAG_CFG_A, &regA);
-        if(err != ERR_NONE) { return err; }
-
-        // clear and set
-        regA &= ~(MAG_CFGA_MD | MAG_CFGA_LP);
-        regA |= currentMagMode;
-
-        err = writeReg(LSM303_MAG, MAG_CFG_A, regA);
-    }
-
-    return err;
-}
 
 int32_t lsm303_acc_dataready(void)
 {
@@ -220,267 +231,108 @@ int32_t lsm303_mag_dataready(void)
     return (statusReg & ZYX_NEW_DATA_AVAILABLE);
 }
 
-AxesRaw_t lsm303_readAcc()
+int32_t lsm303_acc_rawRead(AxesRaw_t* rawRead)
 {
-    int32_t err;                    // catch error value
-    uint_fast8_t shift = 0;         // the shift amount depends on operating mode
-	AxesRaw_t Axes;                 // the return value
-
     // get a new reading of raw data
-	err = readContinous(LSM303_ACCEL, ACC_OUT_X_L, (uint8_t*)&Axes, 6);
+	return readContinous(LSM303_ACCEL, ACC_OUT_X_L, (uint8_t*)rawRead, 6);
+}
 
-    switch(currentAccMode) {
-        case ACC_HR_1_HZ:
-        case ACC_HR_10_HZ:
-        case ACC_HR_25_HZ:
-        case ACC_HR_50_HZ:
-        case ACC_HR_100_HZ:
-        case ACC_HR_200_HZ:
-        case ACC_HR_400_HZ:
-        case ACC_HR_1344_HZ: shift = 4;
-                             break;
-        case ACC_NORM_1_HZ:
-        case ACC_NORM_10_HZ:
-        case ACC_NORM_25_HZ:
-        case ACC_NORM_50_HZ:
-        case ACC_NORM_100_HZ:
-        case ACC_NORM_200_HZ:
-        case ACC_NORM_400_HZ:
-        case ACC_NORM_1344_HZ: shift = 6;
-                               break;
-        case ACC_LP_1_HZ:
-        case ACC_LP_10_HZ:
-        case ACC_LP_25_HZ:
-        case ACC_LP_50_HZ:
-        case ACC_LP_100_HZ:
-        case ACC_LP_200_HZ:
-        case ACC_LP_400_HZ:
-        case ACC_LP_1620_HZ:
-        case ACC_LP_5376_HZ: shift = 8;
-                             break;
-        default: err = ERR_INVALID_ARG;
-    };
+int32_t lsm303_acc_FIFOWatermark(bool* overflow)
+{
+	int32_t err;               // error return for the function
+    uint8_t statusfifo_reg;
 
-    if(err == ERR_NONE) {
-        Axes.xAxis >>= shift;
-        Axes.yAxis >>= shift;
-        Axes.zAxis >>= shift;
+    err = readReg(LSM303_ACCEL, ACC_FIFO_SRC, &statusfifo_reg);
+
+    if(ERR_NONE == err) {
+        err = (statusfifo_reg & ACC_FIFOSRC_WTM);
     }
-    else {
-        Axes.xAxis = 0xFF;
-        Axes.yAxis = 0xFF;
-        Axes.zAxis = 0xFF;
+	return err;
+}
+
+int32_t lsm303_acc_FIFOOverrun(void)
+{
+    int32_t err;               // error return for the function
+	uint8_t statusfifo_reg;
+
+    err = readReg(LSM303_ACCEL, ACC_FIFO_SRC, &statusfifo_reg);
+
+    if(ERR_NONE == err) {
+        err = (statusfifo_reg & ACC_FIFOSRC_OVRN);
+    }
+	return err;
+}
+
+int32_t lsm303_acc_FIFOEmpty(void)
+{
+    int32_t err;               // error return for the function
+	uint8_t statusfifo_reg;
+
+	err = readReg(LSM303_ACCEL, ACC_FIFO_SRC, &statusfifo_reg);
+
+    if(ERR_NONE == err) {
+        err = (statusfifo_reg & ACC_FIFOSRC_EMPTY);
+    }
+	return err;
+}
+
+int32_t lsm303_acc_FIFOCount(void)
+{
+    int32_t err;               // error return for the function
+	uint8_t statusfifo_reg;
+
+    err = readReg(LSM303_ACCEL, ACC_FIFO_SRC, &statusfifo_reg);
+
+    if(ERR_NONE == err) {
+        err = (statusfifo_reg & ACC_FIFOSRC_FSS);
+    }
+    return err;
+}
+
+int32_t lsm303_acc_FIFOread(AxesRaw_t* buf, const uint32_t LEN, bool* overrun)
+{
+	int32_t err;        // catch error value
+	uint8_t	count;      // the number of unread samples, and fifo status register
+
+    // get the FIFO status, return error code if I2C fails
+    err = readReg(LSM303_ACCEL, ACC_FIFO_SRC, &count);
+    if(err != ERR_NONE) { return err; }
+
+    // set the overrun flag if it is not null
+    if(overrun != NULL) {
+        *overrun = count & ACC_FIFOSRC_OVRN;
     }
 
-    return Axes;
-}
+    // get the number of unread samples by masking the lower 5 bits
+	count = count & ACC_FIFOSRC_FSS;
 
-int32_t lsm303_startFIFO()
-{
-	int32_t err						= 0;       // error return for the function
-	volatile uint8_t fifoctrl_reg   = readReg(LSM303_ACCEL, ACC_FIFO_CTRL);
-	volatile uint8_t fifoenable_reg = readReg(LSM303_ACCEL, ACC_CTRL5);
+	// adjust read size to be the smallest of the buffer length or available samples
+    count = (count > LEN ? LEN : count);
 
-	fifoctrl_reg &= (0x20);	//Clear mode and threshold value
+    // read the number of samples calculated
+	err = readContinous(LSM303_ACCEL, ACC_OUT_X_L, (uint8_t*)buf, count*6);
 
-	fifoctrl_reg   |= (ACC_FIFO_STREAM|0x19);	//Set FIFO to stream mode and threshold value to be 25
-	fifoenable_reg |= (ACC_CTRL5_FIFO_EN|ACC_CTRL5_BOOT);	//Enable FIFO
-
-	err |= writeReg(LSM303_ACCEL, ACC_CTRL5, fifoenable_reg);
-	err |= writeReg(LSM303_ACCEL, ACC_FIFO_CTRL, fifoctrl_reg);
-
+    // return the error code, or the number of samples read if there is no error
+    err = (err == ERR_NONE ? count : err);
 	return err;
 }
 
-int32_t lsm303_stopFIFO()
+int32_t lsm303_mag_rawRead(AxesRaw_t* rawMag)
 {
-	int32_t err			   = 0;       // error return for the function
-	uint8_t fifoenable_reg = readReg( LSM303_ACCEL, ACC_CTRL5 );
-
-	fifoenable_reg &= ~( ACC_CTRL5_FIFO_EN | ACC_CTRL5_BOOT );	//Disable FIFO
-
-
-	//uint8_t reg1 = readReg(LSM303_ACCEL, ACC_CTRL1);
-	//uint8_t reg4 = readReg(LSM303_ACCEL, ACC_CTRL4);
-	err |= writeReg(LSM303_ACCEL, ACC_CTRL5, fifoenable_reg);
-
-	return err;
+    return readContinous(LSM303_MAG, MAG_OUTX_L, (uint8_t*)rawMag, 6);
 }
 
-int32_t lsm303_statusFIFO_WATERMARK()
-{
-	volatile uint8_t statusfifo_reg = 0;
-	statusfifo_reg					= readReg(LSM303_ACCEL, ACC_FIFO_SRC);
-
-	return (statusfifo_reg & ACC_FIFOSRC_WTM);
-}
-
-int32_t lsm303_statusFIFO_OVRN()
-{
-	uint8_t statusfifo_reg = 0;
-	statusfifo_reg		   = readReg(LSM303_ACCEL, ACC_FIFO_SRC);
-
-	return (statusfifo_reg & ACC_FIFOSRC_OVRN);
-}
-
-int32_t lsm303_statusFIFO_EMPTY()
-{
-	uint8_t statusfifo_reg = 0;
-	statusfifo_reg		   = readReg(LSM303_ACCEL, ACC_FIFO_SRC);
-	return (statusfifo_reg & ACC_FIFOSRC_EMPTY);
-}
-
-int32_t lsm303_statusFIFO_UNREADNUMBER()
-{
-	uint8_t statusfifo_reg = readReg(LSM303_ACCEL, ACC_FIFO_SRC);
-	return (statusfifo_reg&ACC_FIFOSRC_FSS);
-}
-
-int32_t lsm303_FIFOread(AxesRaw_t* buf, const uint32_t buffer_size)
-{
-	int32_t err			         = 0; // catch error value
-	uint_fast8_t shift	         = 0; // the shift amount depends on operating mode
-	int32_t	unreadsamples_number = 0;
-	int32_t	samples_number	     = 0;
-
-	unreadsamples_number			  = lsm303_statusFIFO_UNREADNUMBER()+1;
-	// get a new reading of raw data
-	if(buffer_size >= unreadsamples_number){
-		samples_number = unreadsamples_number;
-	}else{
-		samples_number = buffer_size;
-	}
-
-	err = readContinous(LSM303_ACCEL, ACC_OUT_X_L, (uint8_t*)buf, samples_number*6);
-
-
-	switch(currentMode) {
-		case ACC_HR_1_HZ:
-		case ACC_HR_10_HZ:
-		case ACC_HR_25_HZ:
-		case ACC_HR_50_HZ:
-		case ACC_HR_100_HZ:
-		case ACC_HR_200_HZ:
-		case ACC_HR_400_HZ:
-		case ACC_HR_1344_HZ: shift = 4;
-		break;
-		case ACC_NORM_1_HZ:
-		case ACC_NORM_10_HZ:
-		case ACC_NORM_25_HZ:
-		case ACC_NORM_50_HZ:
-		case ACC_NORM_100_HZ:
-		case ACC_NORM_200_HZ:
-		case ACC_NORM_400_HZ:
-		case ACC_NORM_1344_HZ: shift = 6;
-		break;
-		case ACC_LP_1_HZ:
-		case ACC_LP_10_HZ:
-		case ACC_LP_25_HZ:
-		case ACC_LP_50_HZ:
-		case ACC_LP_100_HZ:
-		case ACC_LP_200_HZ:
-		case ACC_LP_400_HZ:
-		case ACC_LP_1620_HZ:
-		case ACC_LP_5376_HZ: shift = 8;
-		break;
-		default: err = -1;
-	};
-
-	for(int i=0; i<samples_number; i++){
-		if(err == 0) {
-			buf[i].xAxis >>= shift;
-			buf[i].yAxis >>= shift;
-			buf[i].zAxis >>= shift;
-		}
-		else {
-			buf[i].xAxis = 0xFF;
-			buf[i].yAxis = 0xFF;
-			buf[i].zAxis = 0xFF;
-		}
-	}
-
-	return (samples_number*6);
-}
-
-int32_t lsm303_ACC_watermarkISR_enable()
-{
-	int32_t err			   = 0;       // error return for the function
-	uint8_t reg3 = readReg( LSM303_ACCEL, ACC_CTRL3 );
-
-	reg3 |= (ACC_CTRL3_I1_WTM);       //Enable watermark interrupt
-
-	err |= writeReg(LSM303_ACCEL, ACC_CTRL3, reg3);
-
-	return err;
-}
-
-int32_t lsm303_ACC_watermarkISR_disable()
-{
-	int32_t err			   = 0;       // error return for the function
-	uint8_t reg3 = readReg( LSM303_ACCEL, ACC_CTRL3 );
-
-	reg3 &= ~(ACC_CTRL3_I1_WTM);	  //Enable watermark interrupt
-
-	err |= writeReg(LSM303_ACCEL, ACC_CTRL3, reg3);
-
-	return err;
-}
-
-int32_t lsm303_MAG_DRDYISR_enable()
-{
-	int32_t err		= 0;       // error return for the function
-	uint8_t src_reg = readReg( LSM303_MAG, MAG_INT_SRC );
-
-	src_reg |= (MAG_INTSRC_INT);	//Disable x,y,z axes and interrupt function
-	err |= writeReg(LSM303_MAG, MAG_INT_SRC, src_reg);
-
-	return err;
-}
-
-int32_t lsm303_MAG_DRDYISR_disable()
-{
-	int32_t err			   = 0;       // error return for the function
-	uint8_t src_reg = readReg( LSM303_MAG, MAG_INT_SRC );
-
-	src_reg &= ~(MAG_INTSRC_INT);	//Disable x,y,z axes and interrupt function
-
-	err |= writeReg(LSM303_MAG, MAG_INT_SRC, src_reg);
-
-	return err;
-}
-
-AxesRaw_t lsm303_readMag()
-{
-    int32_t err;
-	AxesRaw_t Axes;
-
-    err = readContinous(LSM303_MAG, MAG_OUTX_L, (uint8_t*)&Axes, 6);
-
-    return Axes;
-}
-
-// TODO - enable temp readings in a function, and read them correctly
-int16_t lsm303_readTemp()
-{
-    int32_t err;
-	int16_t temperature;
-
-	err = readContinous(LSM303_ACCEL, ACC_TEMP_L, (uint8_t*)&temperature, 2);
-
-    return temperature;
-}
-
-AxesSI_t lsm303_getGravity()
+AxesSI_t lsm303_acc_getSI(AxesRaw_t* rawAccel)
 {
     // different Scales, there are 3 modes and 4 full scale settings. these are mg/LSB values from data sheet page 13.
 	static const float scale[3][4] = {{0.98, 1.95, 3.9, 11.72},
                                       {3.9, 7.82, 15.63, 46.9},
                                       {15.63, 31.26, 62.52, 187.58}};
-    int i,j;                            // index for the array above
-	AxesSI_t  results;                  // stores the results of the reading
 
-    // get a new reading
-    AxesRaw_t accel = lsm303_readAcc();
+    int i;                      // holds index for power mode
+    int j;                      // index for scale setting
+    uint_fast8_t shift = 0;     // the shift amount depends on operating mode
+    AxesSI_t siAccel;           // the return value
 
     switch(currentAccMode) {
         case ACC_HR_1_HZ:
@@ -491,6 +343,7 @@ AxesSI_t lsm303_getGravity()
         case ACC_HR_200_HZ:
         case ACC_HR_400_HZ:
         case ACC_HR_1344_HZ: i = 0;
+                             shift = 4;
                              break;
         case ACC_NORM_1_HZ:
         case ACC_NORM_10_HZ:
@@ -500,6 +353,7 @@ AxesSI_t lsm303_getGravity()
         case ACC_NORM_200_HZ:
         case ACC_NORM_400_HZ:
         case ACC_NORM_1344_HZ: i = 1;
+                               shift = 6;
                                break;
         case ACC_LP_1_HZ:
         case ACC_LP_10_HZ:
@@ -510,7 +364,8 @@ AxesSI_t lsm303_getGravity()
         case ACC_LP_400_HZ:
         case ACC_LP_1620_HZ:
         case ACC_LP_5376_HZ: i = 2;
-                               break;
+                             shift = 8;
+                             break;
         default: i = 3;
     };
 
@@ -527,29 +382,38 @@ AxesSI_t lsm303_getGravity()
 	};
 
     // return error value if the index are out of range
-    if(i >= 3 || j >= 4 || accel.xAxis == 0xFF) {
-        results.xAxis = NAN;
-        results.yAxis = NAN;
-        results.zAxis = NAN;
-        return results;
+    if(i >= 3 || j >= 4) {
+        siAccel.xAxis = NAN;
+        siAccel.yAxis = NAN;
+        siAccel.zAxis = NAN;
     }
 
-    // calculate the axis in Gs
-	results.xAxis = ( accel.xAxis * scale[i][j] / 1000.0);
-	results.yAxis = ( accel.yAxis * scale[i][j] / 1000.0);
-	results.zAxis = ( accel.zAxis * scale[i][j] / 1000.0);
+    // shift values to proper placement
+    rawAccel->xAxis >>= shift;
+    rawAccel->yAxis >>= shift;
+    rawAccel->zAxis >>= shift;
 
-	return results;
+    // calculate the axis in Gs
+	siAccel.xAxis = ( rawAccel->xAxis * scale[i][j] / 1000.0);
+	siAccel.yAxis = ( rawAccel->yAxis * scale[i][j] / 1000.0);
+	siAccel.zAxis = ( rawAccel->zAxis * scale[i][j] / 1000.0);
+
+	return siAccel;
 }
 
-AxesSI_t lsm303_getGauss()
+AxesSI_t lsm303_mag_getSI(AxesRaw_t* rawMag)
 {
-	AxesSI_t  results;
-	AxesRaw_t mag = lsm303_readMag();
+    AxesSI_t siMag;        // return value
 
-	results.xAxis = (mag.xAxis * 1.5 / 1000.0);
-	results.yAxis = (mag.yAxis * 1.5 / 1000.0);
-	results.zAxis = (mag.zAxis * 1.5 / 1000.0);
+    siMag.xAxis = (rawMag->xAxis * 1.5 / 1000.0);
+    siMag.yAxis = (rawMag->yAxis * 1.5 / 1000.0);
+    siMag.zAxis = (rawMag->zAxis * 1.5 / 1000.0);
 
-	return results;
+	return siMag;
+}
+
+// TODO - enable temp readings in a function, and read them correctly
+int32_t lsm303_readTemp(int16_t* temperature)
+{
+    return readContinous(LSM303_ACCEL, ACC_TEMP_L, (uint8_t*)temperature, 2);
 }
