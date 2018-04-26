@@ -250,6 +250,11 @@ int32_t lsm303_acc_FIFOWatermark(bool* overflow)
 
     if(ERR_NONE == err) {
         err = (statusfifo_reg & ACC_FIFOSRC_WTM);
+
+        // set overflow if not NULL
+        if(overflow != NULL) {
+            *overflow = (statusfifo_reg & ACC_FIFOSRC_OVRN);
+        }
     }
 	return err;
 }
@@ -311,7 +316,7 @@ int32_t lsm303_acc_FIFOread(AxesRaw_t* buf, const uint32_t LEN, bool* overrun)
 	count = count & ACC_FIFOSRC_FSS;
 
 	// adjust read size to be the smallest of the buffer length or available samples
-    count = (count > LEN ? LEN : count);
+    count = (count >= LEN ? LEN : count);
 
     // read the number of samples calculated
 	err = readContinous(LSM303_ACCEL, ACC_OUT_X_L, (uint8_t*)buf, count*6);
