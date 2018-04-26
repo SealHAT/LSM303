@@ -110,6 +110,10 @@ int32_t lsm303_acc_startFIFO(const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MO
 {
     int32_t err;        // error return value
 
+    // set FIFO to bypass and watermark to zero to get rid of any existing watermark interrupts
+    err = writeReg(LSM303_ACCEL, ACC_FIFO_CTRL, ACC_FIFO_BYPASS);
+    if(err < 0) { return err; }
+
     // reboot accelerometer memory contents
     err = writeReg(LSM303_ACCEL, ACC_CTRL5, ACC_CTRL5_BOOT);
     if(err < 0) { return err; }
