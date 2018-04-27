@@ -5,17 +5,48 @@
 #include "SerialPrint.h"
 
 #define STRING_SIZE         (64)
-#define BUFFER_SIZE         (15)
+#define BUFFER_SIZE         (40)
 
 int32_t printAxis(AxesSI_t* reading);
+
+void I2C_UNBLOCK_BUS(const uint8_t SDA, const uint8_t SCL)
+{
+	uint32_t i, count;
+
+	// Set pin SDA direction to input, pull off
+	gpio_set_pin_direction(SDA, GPIO_DIRECTION_IN);
+	gpio_set_pin_pull_mode(SDA, GPIO_PULL_OFF);
+	gpio_set_pin_function(SDA, GPIO_PIN_FUNCTION_OFF);
+
+	for(i = 0, count = 0; i < 50; i++) {
+		count += gpio_get_pin_level(SDA);
+	}
+
+	if(count < 10) {
+		// Set pin SCL direction to output, pull off
+		gpio_set_pin_direction(SCL, GPIO_DIRECTION_OUT);
+		gpio_set_pin_pull_mode(SCL, GPIO_PULL_OFF);
+		gpio_set_pin_function(SCL, GPIO_PIN_FUNCTION_OFF);
+
+		for(i = 0; i <= 32; i++) {
+			gpio_toggle_pin_level(SCL);
+		}
+	}
+
+}
 
 int main(void)
 {
     AxesRaw_t xcel[BUFFER_SIZE];	    // Accelerometer reading
     AxesRaw_t mag;					    // Magnetometer  reading
+	uint32_t i;
+	uint32_t odba; 
+	AxesSI_t xcel_SI[BUFFER_SIZE];
     int32_t   err;                      // error code catcher
+	int32_t count;
     bool      ovflw;                    // catch overflows
 
+	I2C_UNBLOCK_BUS(IMU_SDA, IMU_SCL);
     atmel_start_init();
 
     // initialize the I2C for the IMU
@@ -28,25 +59,44 @@ int main(void)
     lsm303_mag_start(MAG_LP_10_HZ);
 
     for(;;) {
-
+		
         if(gpio_get_pin_level(IMU_INT1_XL)) {
-            err = lsm303_acc_FIFOread(xcel, BUFFER_SIZE, &ovflw);
-
+			//gpio_set_pin_level(LED_BUILTIN, true);
+			
+            count = lsm303_acc_FIFOread(xcel, BUFFER_SIZE, &ovflw);
+			
+			for(i = 0; i<count; i++){
+				xcel_SI[i] = lsm303_acc_getSI(&(xcel[i]));
+			}
+			
+			//gpio_set_pin_level(LED_BUILTIN, false);
             if(err < 0) {
-                gpio_set_pin_level(LED_BUILTIN, true);
+                //gpio_set_pin_level(LED_BUILTIN, false);
                 while(1) {;}
             }
-
-            if(ovflw){
-                gpio_set_pin_level(LED_BUILTIN, true);
+			//gpio_set_pin_level(LED_BUILTIN, false);
+            if(ovflw){;
+                //gpio_set_pin_level(LED_BUILTIN, false);
             }
             else {
-                gpio_set_pin_level(LED_BUILTIN, false);
+				if(usb_dtr()) {
+					gpio_set_pin_level(LED_BUILTIN, usb_dtr());
+					for(i = 0; i<count; i++){
+						err = printAxis(&(xcel_SI[i]));
+					}
+					
+					if(err < 0) {
+						delay_ms(1);
+						usb_write("ERROR!\n", 7);
+					} // USB ERROR
+				} // USB DTR ON
             }
         }
-
+		
         if(gpio_get_pin_level(IMU_INT_MAG)) {
+			//gpio_set_pin_level(LED_BUILTIN, true);
             err = lsm303_mag_rawRead(&mag);
+			//gpio_set_pin_level(LED_BUILTIN, false);
             if(err != ERR_NONE) {
                 gpio_set_pin_level(LED_BUILTIN, true);
                 while(1) {;}

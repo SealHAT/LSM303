@@ -127,6 +127,8 @@ int32_t lsm303_acc_startFIFO(const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MO
 
     // set FIFO watermark to 25 and set to stream mode
     err = writeReg(LSM303_ACCEL, ACC_FIFO_CTRL, (ACC_FIFO_STREAM|0x19));
+	uint8_t ctrl_reg;
+    err = readReg(LSM303_ACCEL, ACC_FIFO_CTRL, &ctrl_reg);
     if(err < 0) { return err; }
 
     // set watermark interrupt on pin 1
