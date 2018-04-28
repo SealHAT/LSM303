@@ -157,6 +157,78 @@ int32_t lsm303_acc_stop(void)
     return writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
 }
 
+int32_t lsm303_acc_setINT2(void)
+{
+	int32_t err;        // error return for the function
+	uint8_t reg6;
+	uint8_t thres_reg;       // ACC threshold setting register 
+	uint8_t cfg_reg;       // ACC INT2 control register 
+	int j;
+	
+	switch(currentScale) {
+		case ACC_FS_2G:  j = 0; 
+		break;
+		case ACC_FS_4G:  j = 1;
+		break;
+		case ACC_FS_8G:  j = 2;
+		break;
+		case ACC_FS_16G: j = 3;
+		break;
+		default: j = 0;
+	};
+	
+	err = readReg(LSM303_ACCEL, ACC_CTRL6, &reg6);
+	
+	reg6 |= ACC_CTRL6_I2_INT2;
+	thres_reg = ((0x12) >> j); //threshold = 0.3g
+	cfg_reg = (ACC_INTCFG_AOI|ACC_INTMODE_6DPOS|
+			   ACC_INTCFG_ZHIE|ACC_INTCFG_ZLIE|
+			   ACC_INTCFG_YHIE|ACC_INTCFG_YLIE|
+			   ACC_INTCFG_XHIE|ACC_INTCFG_XLIE); //&~ (ACC_INTSRC_ZH|ACC_INTSRC_ZL); //Test
+	
+	err = writeReg(LSM303_ACCEL, ACC_INT2_THS, thres_reg); //Set threshold for interrupt 2
+	err = writeReg(LSM303_ACCEL, ACC_INT2_CFG, cfg_reg); //Enable 6D modes, all the axes and interrupt modes
+	err = writeReg(LSM303_ACCEL, ACC_CTRL6, reg6);
+	
+	if(err != ERR_NONE) { return err; }
+
+	return err;
+}
+
+int32_t lsm303_motion_detect(uint32_t* reg_detect)
+{
+	int32_t err;        // error return for the function
+	uint8_t int2_src = 0x00;
+
+	err = readReg(LSM303_ACCEL, ACC_CTRL1, &int2_src);
+	
+	if(int2_src & ACC_INTSRC_IA){
+		if(int2_src & (ACC_INTSRC_XL|ACC_INTSRC_XH)){ //x > 0.3g
+			*reg_detect |= SWAY; //SWAY bit is enabled
+			}else{
+			*reg_detect &= ~(SWAY); //Clear SWAY bit
+		}
+	
+		if(int2_src & (ACC_INTSRC_YL|ACC_INTSRC_YH)){ //y > 0.3g
+			*reg_detect |= SURGE; //SWAY bit is enabled
+			}else{
+			*reg_detect &= ~SURGE; //Clear SWAY bit
+		}
+	
+		if(int2_src & (ACC_INTSRC_ZL|ACC_INTSRC_ZH)){ //z > 0.3g
+			*reg_detect |= HEAVE; //SWAY bit is enabled
+			}else{
+			*reg_detect &= ~HEAVE; //Clear SWAY bit
+		}
+	}else{
+		*reg_detect = 0x80;	//Resting bit/No detection
+	}
+	
+	if(err != ERR_NONE) { return err; }
+
+	return err;
+}
+
 int32_t lsm303_mag_start(const MAG_OPMODE_t MODE)
 {
 	int32_t err;        // err return value

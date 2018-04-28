@@ -842,6 +842,12 @@ pads:
     mode: Digital input
     user_label: IMU_INT1_XL
     configuration: null
+  IMU_INT2_XL:
+    name: PA19
+    definition: Atmel:SAMD21_Drivers:0.0.1::SAMD21G18A-MF::pad::PA19
+    mode: Digital input
+    user_label: IMU_INT2_XL
+    configuration: null
   IMU_SDA:
     name: PA22
     definition: Atmel:SAMD21_Drivers:0.0.1::SAMD21G18A-MF::pad::PA22

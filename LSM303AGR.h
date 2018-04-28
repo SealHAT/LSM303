@@ -31,6 +31,12 @@ typedef struct {
 	float zAxis;
 } AxesSI_t;
 
+typedef struct {
+	uint8_t sway;
+	uint8_t surge;
+	uint8_t heave;
+} MOTION_t;
+
 /* Valid modes for the LSM303AGR */
 typedef enum {
     ACC_POWER_DOWN      = 0x00,
@@ -86,7 +92,15 @@ typedef enum {
     MAG_LP_100_HZ       = 0x1C
 } MAG_OPMODE_t;
 
-
+typedef enum {
+	SWAY	= 0x01,
+	SURGE	= 0x02,
+	HEAVE	= 0x04,
+	
+	PITCH	= 0x08,
+	ROLL	= 0x10,
+	YAW		= 0x20
+}D_MOTION_t;
 
 /** @brief initialize the lsm303 IMU sensor without starting it
  *
@@ -130,6 +144,17 @@ int32_t lsm303_acc_startFIFO(const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MO
  * @return true if successful, system error code otherwise
  */
 int32_t lsm303_acc_stop();
+
+/** @brief 
+ *
+ * 
+ * 
+ * @return true if successful, system error code otherwise
+ */
+
+int32_t lsm303_acc_setINT2(void);
+
+int32_t lsm303_motion_detect(uint32_t* reg_detect);
 
 /** @brief Get the status of the accelerometer
  *
