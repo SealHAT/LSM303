@@ -161,7 +161,7 @@ int32_t lsm303_acc_stop(void)
     return writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
 }
 
-int32_t lsm303_acc_setINT2(void)
+int32_t lsm303_acc_setINT2(ACC_INT2_type_t mode, uint8_t threshold, uint8_t duration) //type, threshold, time
 {
 	int32_t err;        // error return for the function
 	uint8_t reg6;
@@ -184,18 +184,50 @@ int32_t lsm303_acc_setINT2(void)
 	err = readReg(LSM303_ACCEL, ACC_CTRL6, &reg6);
 	
 	reg6 |= ACC_CTRL6_I2_INT2;
-	thres_reg = ((0x12) >> j); //threshold = 0.3g
-	cfg_reg = (ACC_INTCFG_AOI|ACC_INTMODE_6DPOS|
-			   ACC_INTCFG_ZHIE|ACC_INTCFG_ZLIE|
-			   ACC_INTCFG_YHIE|ACC_INTCFG_YLIE|
-			   ACC_INTCFG_XHIE|ACC_INTCFG_XLIE); //&~ (ACC_INTSRC_ZH|ACC_INTSRC_ZL); //Test
+	thres_reg = ((threshold) >> j); 
+	cfg_reg = (mode); //&~ (ACC_INTSRC_ZH|ACC_INTSRC_ZL); //Test
 	
 	err = writeReg(LSM303_ACCEL, ACC_INT2_THS, thres_reg); //Set threshold for interrupt 2
 	err = writeReg(LSM303_ACCEL, ACC_INT2_CFG, cfg_reg); //Enable 6D modes, all the axes and interrupt modes
+	err = writeReg(LSM303_ACCEL, ACC_INT2_DUR, duration); //Set the minimum duration of the Interrupt 2 event to be recognized
 	err = writeReg(LSM303_ACCEL, ACC_CTRL6, reg6);
 	
 	if(err != ERR_NONE) { return err; }
 
+	return err;
+}
+
+int32_t lsm303_INT2_Enable4D(void)
+{
+	
+	int32_t err;        // error return for the function
+	uint8_t reg5;
+	
+	err = readReg(LSM303_ACCEL, ACC_CTRL5, &reg5);
+	
+	reg5 |= (ACC_INT2_4D_en);
+	
+	err = writeReg(LSM303_ACCEL, ACC_CTRL5, reg5);
+	
+	if(err != ERR_NONE) { return err; }
+	
+	return err;
+}
+
+int32_t lsm303_INT2_Disable4D(void)
+{
+	
+	int32_t err;        // error return for the function
+	uint8_t reg5;
+	
+	err = readReg(LSM303_ACCEL, ACC_CTRL5, &reg5);
+	
+	reg5 &= ~(ACC_INT2_4D_en);
+	
+	err = writeReg(LSM303_ACCEL, ACC_CTRL5, reg5);
+	
+	if(err != ERR_NONE) { return err; }
+	
 	return err;
 }
 
@@ -225,7 +257,7 @@ int32_t lsm303_motion_detect(uint32_t* reg_detect)
 			*reg_detect &= ~HEAVE; //Clear SWAY bit
 		}
 	}else{
-		*reg_detect = 0x80;	//Resting bit/No detection
+		err = ERR_UNSUPPORTED_OP;
 	}
 	
 	if(err != ERR_NONE) { return err; }

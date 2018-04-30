@@ -31,6 +31,26 @@ typedef struct {
 	float zAxis;
 } AxesSI_t;
 
+typedef enum {
+	ACC_INT2_4D_en			 = 0x02,
+	ACC_INT2_6D_en			 = 0x3F,
+	
+	ACC_INT2_OR_Z          = 0x30,
+	ACC_INT2_6DMOVE_Z      = 0x4F,
+	ACC_INT2_AND_Z         = 0xB0,
+	ACC_INT2_6DPOS_Z       = 0xF0,
+	
+	ACC_INT2_OR_XY          = 0x0F,
+	ACC_INT2_6DMOVE_XY      = 0x70,
+	ACC_INT2_AND_XY         = 0x8F,
+	ACC_INT2_6DPOS_XY       = 0xCF,
+	
+	ACC_INT2_OR_XYZ          = 0x3F,
+	ACC_INT2_6DMOVE_XYZ      = 0x7F,
+	ACC_INT2_AND_XYZ         = 0xEF,
+	ACC_INT2_6DPOS_XYZ       = 0xFF
+} ACC_INT2_type_t;
+
 typedef struct {
 	uint8_t sway;
 	uint8_t surge;
@@ -93,13 +113,13 @@ typedef enum {
 } MAG_OPMODE_t;
 
 typedef enum {
-	SWAY	= 0x01,
-	SURGE	= 0x02,
-	HEAVE	= 0x04,
+	SWAY	= 0x10,
+	SURGE	= 0x20,
+	HEAVE	= 0x40,
 	
-	PITCH	= 0x08,
-	ROLL	= 0x10,
-	YAW		= 0x20
+	PITCH	= 0x80,
+	ROLL	= 0x0100,
+	YAW		= 0x0200
 }D_MOTION_t;
 
 /** @brief initialize the lsm303 IMU sensor without starting it
@@ -145,15 +165,24 @@ int32_t lsm303_acc_startFIFO(const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MO
  */
 int32_t lsm303_acc_stop();
 
+/** @brief Set the type, threhold and time for Interrupt 2
+ * 
+ *  This function states exactly the interrupt mode, threshold and minimum duration
+ *  to activate interrupt 2 and set up the device properly.
+ * @return true if successful, system error code otherwise
+ */
+int32_t lsm303_acc_setINT2(ACC_INT2_type_t mode, uint8_t threshold, uint8_t duration);
+
+int32_t lsm303_INT2_Enable4D(void);
+
+int32_t lsm303_INT2_Disable4D(void);
+
 /** @brief 
  *
  * 
  * 
  * @return true if successful, system error code otherwise
  */
-
-int32_t lsm303_acc_setINT2(void);
-
 int32_t lsm303_motion_detect(uint32_t* reg_detect);
 
 /** @brief Get the status of the accelerometer

@@ -6,9 +6,12 @@
 
 #define STRING_SIZE         (64)
 #define BUFFER_SIZE         (40)
+#define INT2_THRESHOLD		(0.3/0.016)//g
+#define INT2_DURATION		(0)//N/ODR
 
 int32_t printAxis(AxesSI_t* reading);
 int32_t printbuffer(int32_t* buffer);
+int32_t printval(uint32_t val);
 
 void I2C_UNBLOCK_BUS(const uint8_t SDA, const uint8_t SCL)
 {
@@ -41,14 +44,15 @@ int main(void)
     AxesRaw_t xcel[BUFFER_SIZE];	    // Accelerometer reading
     AxesRaw_t mag;					    // Magnetometer  reading
     int32_t   err;                      // error code catcher
-	int32_t count;
+
     bool      ovflw;                    // catch overflows
-	
+	uint32_t reg_detect;
+//	int32_t count;
 // 	int32_t pitch[BUFFER_SIZE];
 // 	int32_t roll[BUFFER_SIZE];
 // 	AxesSI_t xcel_SI[BUFFER_SIZE];
-	//uint32_t i;
-	uint32_t reg_detect;
+//uint32_t i;
+	
 
 	I2C_UNBLOCK_BUS(IMU_SDA, IMU_SCL);
     atmel_start_init();
@@ -61,14 +65,15 @@ int main(void)
 
     // start the magnetometer at the given rate
     lsm303_mag_start(MAG_LP_10_HZ);
+	lsm303_INT2_Disable4D();
+	lsm303_acc_setINT2(ACC_INT2_6DMOVE_XYZ, INT2_THRESHOLD, INT2_DURATION);
 	
-	lsm303_acc_setINT2();
 
     for(;;) {
 		
         if(gpio_get_pin_level(IMU_INT1_XL)) {
-			gpio_set_pin_level(LED_BUILTIN, true);
-            count = lsm303_acc_FIFOread(xcel, BUFFER_SIZE, &ovflw);
+			
+            err = lsm303_acc_FIFOread(xcel, BUFFER_SIZE, &ovflw);
             if(err < 0) {
                 while(1) {;}
             }
@@ -79,14 +84,21 @@ int main(void)
 				
             }
         }
+		
 		if(gpio_get_pin_level(IMU_INT2_XL)) {
-			gpio_set_pin_level(LED_BUILTIN, false);
-			delay_ms(100);
+			gpio_set_pin_level(LED_BUILTIN, true);
 			err = lsm303_motion_detect(&reg_detect);
+			gpio_set_pin_level(LED_BUILTIN, false);
 			//gpio_set_pin_level(LED_BUILTIN, false);
 			if(err < 0) {
 				while(1) {;}
 			}else {
+				if(usb_dtr()) {
+					err = printval(reg_detect);
+ 					if(err < 0) {
+					usb_write("ERROR!\n", 7);
+ 					} // USB ERROR
+			    }  // USB DTR ON
 				
 			}
 		}
@@ -190,6 +202,16 @@ int32_t printbuffer(int32_t* buffer) {
 	return usb_write(output, n);
 }
 
+int32_t printval(uint32_t val) {
+	static char output[STRING_SIZE];
+	memcpy(output+8, &val, 4);
+	int n = 0;
+
+	n += ftostr(val, 1, &output[n], STRING_SIZE - n);
+	//output[n++] = ',';
+	//output[n++] = '\n';
+	return usb_write(output, n);
+}
 
 // for(;;) {
 // 		
