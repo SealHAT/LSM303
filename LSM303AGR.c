@@ -164,6 +164,7 @@ int32_t lsm303_acc_stop(void)
 int32_t lsm303_acc_setINT2(ACC_INT2_type_t mode, uint8_t threshold, uint8_t duration) //type, threshold, time
 {
 	int32_t err;        // error return for the function
+	uint8_t reg5;
 	uint8_t reg6;
 	uint8_t thres_reg;       // ACC threshold setting register 
 	uint8_t cfg_reg;       // ACC INT2 control register 
@@ -181,15 +182,25 @@ int32_t lsm303_acc_setINT2(ACC_INT2_type_t mode, uint8_t threshold, uint8_t dura
 		default: j = 0;
 	};
 	
+	err = readReg(LSM303_ACCEL, ACC_CTRL5, &reg5);
 	err = readReg(LSM303_ACCEL, ACC_CTRL6, &reg6);
 	
 	reg6 |= ACC_CTRL6_I2_INT2;
 	thres_reg = ((threshold) >> j); 
-	cfg_reg = (mode); //&~ (ACC_INTSRC_ZH|ACC_INTSRC_ZL); //Test
+	cfg_reg = (ACC_INT2_6DMOVE_XYZ); 
+	
+	if(mode == ACC_INT2_6D_en)
+	{
+		reg5 &= ~(ACC_INT2_4D_en);
+	}
+	else if(mode == ACC_INT2_4D_en){
+		reg5 |= (ACC_INT2_4D_en);
+	}
 	
 	err = writeReg(LSM303_ACCEL, ACC_INT2_THS, thres_reg); //Set threshold for interrupt 2
 	err = writeReg(LSM303_ACCEL, ACC_INT2_CFG, cfg_reg); //Enable 6D modes, all the axes and interrupt modes
 	err = writeReg(LSM303_ACCEL, ACC_INT2_DUR, duration); //Set the minimum duration of the Interrupt 2 event to be recognized
+	err = writeReg(LSM303_ACCEL, ACC_CTRL5, reg5);
 	err = writeReg(LSM303_ACCEL, ACC_CTRL6, reg6);
 	
 	if(err != ERR_NONE) { return err; }

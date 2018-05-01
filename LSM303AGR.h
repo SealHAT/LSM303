@@ -32,26 +32,8 @@ typedef struct {
 } AxesSI_t;
 
 typedef enum {
-	ACC_INT2_4D_en			 = 0x01,
-	ACC_INT2_6D_en			 = 0x3F,
-
-	
-	ACC_INT2_6DMOVE_X      = 0x4F,
-	ACC_INT2_6DPOS_X       = 0xC3,
-	
-	//ACC_INT2_6DMOVE_Y      = 0x7C,
-	ACC_INT2_6DPOS_Y       = 0xCC,
-	
-	ACC_INT2_6DMOVE_Z      = 0x43,
-	ACC_INT2_6DPOS_Z       = 0xF0,
-	
-	ACC_INT2_6DMOVE_XY      = 0x70,
-	ACC_INT2_6DPOS_XY       = 0xCF,
-	
-	ACC_INT2_OR_XYZ          = 0x3F,
-	ACC_INT2_6DMOVE_XYZ      = 0x7F,
-	ACC_INT2_AND_XYZ         = 0xEF,
-	ACC_INT2_6DPOS_XYZ       = 0xFF
+	ACC_INT2_4D_en,
+	ACC_INT2_6D_en,
 } ACC_INT2_type_t;
 
 typedef struct {

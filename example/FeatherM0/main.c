@@ -6,7 +6,7 @@
 
 #define STRING_SIZE         (64)
 #define BUFFER_SIZE         (40)
-#define INT2_THRESHOLD		(0.4/0.016)//g
+#define INT2_THRESHOLD		(0.5/0.016)//g
 #define INT2_DURATION		(0)//N/ODR
 
 int32_t printAxis(AxesSI_t* reading);
@@ -66,8 +66,8 @@ int main(void)
     // start the magnetometer at the given rate
     lsm303_mag_start(MAG_LP_10_HZ);
 	
-	lsm303_acc_setINT2(ACC_INT2_6DMOVE_XY, INT2_THRESHOLD, INT2_DURATION);
-	//lsm303_INT2_Disable4D();
+	lsm303_acc_setINT2(ACC_INT2_4D_en, INT2_THRESHOLD, INT2_DURATION);
+	lsm303_INT2_Enable4D();
 
     for(;;) {
 		
@@ -84,11 +84,12 @@ int main(void)
 				
             }
         }
-		
+		gpio_set_pin_level(LED_BUILTIN, false);
 		if(gpio_get_pin_level(IMU_INT2_XL)) {
 			gpio_set_pin_level(LED_BUILTIN, true);
 			err = lsm303_motion_detect(&reg_detect);
-			gpio_set_pin_level(LED_BUILTIN, false);
+			//delay_ms(50);
+			//gpio_set_pin_level(LED_BUILTIN, false);
 			//gpio_set_pin_level(LED_BUILTIN, false);
 			if(err < 0) {
 				while(1) {;}
