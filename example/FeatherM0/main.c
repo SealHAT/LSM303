@@ -67,7 +67,6 @@ int main(void)
     lsm303_mag_start(MAG_LP_10_HZ);
 	
 	lsm303_acc_setINT2(ACC_INT2_4D_en, INT2_THRESHOLD, INT2_DURATION);
-	lsm303_INT2_Enable4D();
 
     for(;;) {
 		

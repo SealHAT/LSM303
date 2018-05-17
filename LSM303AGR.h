@@ -150,7 +150,7 @@ int32_t lsm303_acc_startFIFO(const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MO
  */
 int32_t lsm303_acc_stop();
 
-/** @brief Set the type, threhold and time for Interrupt 2
+/** @brief Set the type, threhold value and time for Interrupt 2
  * 
  *  This function states exactly the interrupt mode, threshold and minimum duration
  *  to activate interrupt 2 and set up the device properly.
@@ -158,14 +158,10 @@ int32_t lsm303_acc_stop();
  */
 int32_t lsm303_acc_setINT2(ACC_INT2_type_t mode, uint8_t threshold, uint8_t duration);
 
-int32_t lsm303_INT2_Enable4D(void);
-
-int32_t lsm303_INT2_Disable4D(void);
-
-/** @brief 
+/** @brief Set up register for accelerometer motion detection 
  *
- * 
- * 
+ * This function check the motion interrupt register on each of the three axis
+ * and return the a register state the motions: SWAY, SURGE and HEAVE.
  * @return true if successful, system error code otherwise
  */
 int32_t lsm303_motion_detect(uint32_t* reg_detect);

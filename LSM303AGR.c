@@ -208,39 +208,6 @@ int32_t lsm303_acc_setINT2(ACC_INT2_type_t mode, uint8_t threshold, uint8_t dura
 	return err;
 }
 
-int32_t lsm303_INT2_Enable4D(void)
-{
-	
-	int32_t err;        // error return for the function
-	uint8_t reg5;
-	
-	err = readReg(LSM303_ACCEL, ACC_CTRL5, &reg5);
-	
-	reg5 |= (ACC_INT2_4D_en);
-	
-	err = writeReg(LSM303_ACCEL, ACC_CTRL5, reg5);
-	
-	if(err != ERR_NONE) { return err; }
-	
-	return err;
-}
-
-int32_t lsm303_INT2_Disable4D(void)
-{
-	
-	int32_t err;        // error return for the function
-	uint8_t reg5;
-	
-	err = readReg(LSM303_ACCEL, ACC_CTRL5, &reg5);
-	
-	reg5 &= ~(ACC_INT2_4D_en);
-	
-	err = writeReg(LSM303_ACCEL, ACC_CTRL5, reg5);
-	
-	if(err != ERR_NONE) { return err; }
-	
-	return err;
-}
 
 int32_t lsm303_motion_detect(uint32_t* reg_detect)
 {
@@ -250,22 +217,22 @@ int32_t lsm303_motion_detect(uint32_t* reg_detect)
 	err = readReg(LSM303_ACCEL, ACC_CTRL1, &int2_src);
 	
 	if(int2_src & ACC_INTSRC_IA){
-		if(int2_src & (ACC_INTSRC_XL|ACC_INTSRC_XH)){ //x > 0.3g
+		if(int2_src & (ACC_INTSRC_XL|ACC_INTSRC_XH)){ //x > threshold(g)
 			*reg_detect |= SWAY; //SWAY bit is enabled
 			}else{
 			*reg_detect &= ~(SWAY); //Clear SWAY bit
 		}
 	
-		if(int2_src & (ACC_INTSRC_YL|ACC_INTSRC_YH)){ //y > 0.3g
-			*reg_detect |= SURGE; //SWAY bit is enabled
+		if(int2_src & (ACC_INTSRC_YL|ACC_INTSRC_YH)){ //x > threshold(g)
+			*reg_detect |= SURGE; //SURGE bit is enabled
 			}else{
-			*reg_detect &= ~SURGE; //Clear SWAY bit
+			*reg_detect &= ~SURGE; //Clear SURGE bit
 		}
 	
-		if(int2_src & (ACC_INTSRC_ZL|ACC_INTSRC_ZH)){ //z > 0.3g
-			*reg_detect |= HEAVE; //SWAY bit is enabled
+		if(int2_src & (ACC_INTSRC_ZL|ACC_INTSRC_ZH)){ //x > threshold(g)
+			*reg_detect |= HEAVE; //HEAVE bit is enabled
 			}else{
-			*reg_detect &= ~HEAVE; //Clear SWAY bit
+			*reg_detect &= ~HEAVE; //Clear HEAVE bit
 		}
 	}else{
 		err = ERR_UNSUPPORTED_OP;
