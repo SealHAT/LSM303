@@ -12,7 +12,7 @@
 #include <atmel_start.h>	/* where the IO functions live */
 #include <stdint.h>
 #include <stdbool.h>
-#include "math.h"
+//#include "math.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -108,17 +108,9 @@ typedef enum {
     MOTION_INT_XZ_LOW       = 0x11,
     MOTION_INT_YZ_LOW       = 0x14,
     MOTION_INT_XYZ_LOW      = 0x15,
+
+    MOTION_INT_MASK         = 0x3F
 } ACC_MOTION_AXIS_t;
-
-typedef enum {
-	SWAY    = 0x10,
-	SURGE   = 0x20,
-	HEAVE   = 0x40,
-
-	PITCH   = 0x80,
-	ROLL    = 0x0100,
-	YAW     = 0x0200
-}D_MOTION_t;
 
 /** @brief initialize the lsm303 IMU sensor without starting it
  *
@@ -172,7 +164,7 @@ int32_t lsm303_acc_stop();
  * adjust all input accordingly as long as the parameters given are equal to or less than the current
  * sensitivity.
  *
- * @param mode [IN]
+ * @param sensitivity [IN] some combination of axis to detect from the ACC_MOTION_AXIS_t enumeration.
  * @param threshold [IN] The Threshold of activation. This is used for both the positive
  *                       and negative directions. The value passed in should be in milliGravities
  *                       and the function will return ERR_INVALID_ARG if the threshold is
@@ -192,7 +184,7 @@ int32_t lsm303_acc_motionDetectStart(const uint8_t sensitivity, uint16_t thresho
  * @param detect [IN] 8-bit value to store the interrupt flags as described by ACC_MOTION_AXIS_t
  * @return true if successful, system error code otherwise
  */
-static inline int32_t lsm303_acc_motionDetectRead(uint8_t* detect) { return readReg(LSM303_ACCEL, ACC_CTRL1, detect); }
+int32_t lsm303_acc_motionDetectRead(uint8_t* detect);
 
 /** @brief Get the status of the accelerometer
  *
@@ -259,7 +251,7 @@ int32_t lsm303_acc_FIFOCount(void);
  * @param buf [OUT] pointer to a buffer of AxesRaw_t structures, must be a multiple of 6 bytes
  * @param LEN [IN] the number of structures in the buffer (number of bytes / 6)
  * @param overrun [OUT] optional flag to indicate FIFO overrun. Pass NULL if not used.
- * @return ERR_NONE if success, system error or I2C error if failure.
+ * @return Number of bytes read if successful, system error or I2C error if failure.
  */
 int32_t lsm303_acc_FIFOread(AxesRaw_t* buf, const uint32_t LEN, bool* overrun);
 

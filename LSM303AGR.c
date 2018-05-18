@@ -152,16 +152,19 @@ int32_t lsm303_acc_stop(void)
     uint8_t reg1;       // hold the first control register
 
     err = readReg(LSM303_ACCEL, ACC_CTRL1, &reg1);
-    if(err != ERR_NONE) { return err; }
 
-    reg1 &= ~(ACC_CTRL1_ODR);
+    if(!err) {
+        reg1 &= ~(ACC_CTRL1_ODR);
+        err = writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
+    }
 
-    return writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
+    return err;
 }
 
 int32_t lsm303_acc_motionDetectStart(const uint8_t sensitivity, uint16_t threshold, uint8_t duration)
 {
 	int32_t err = ERR_NONE; // error return for the function
+    uint8_t ctrl5;
 
 	// verify the threshold argument. do this first since it can set error to ERR_NONE
     switch(currentScale) {
@@ -188,22 +191,36 @@ int32_t lsm303_acc_motionDetectStart(const uint8_t sensitivity, uint16_t thresho
     }
 
     if(!err) {
-	    err = writeReg(LSM303_ACCEL, ACC_INT2_THS, (threshold & ACC_THS_MASK));
+//         err = readReg(LSM303_ACCEL, ACC_CTRL5, &ctrl5);
+        readReg(LSM303_ACCEL, ACC_INT1_SRC, &ctrl5);
 
         if(!err) {
-            err = writeReg(LSM303_ACCEL, ACC_INT2_DUR, (duration  & ACC_DUR_MASK));
+	        err = writeReg(LSM303_ACCEL, ACC_INT1_THS, (threshold & ACC_THS_MASK));
         }
 
         if(!err) {
-            err = writeReg(LSM303_ACCEL, ACC_INT2_CFG, (ACC_INTMODE_6DMOVE | (sensitivity & ACC_INTCFG_AXIS_MASK)));
+            err = writeReg(LSM303_ACCEL, ACC_INT1_DUR, (duration  & ACC_DUR_MASK));
         }
 
         if(!err) {
-            err = writeReg(LSM303_ACCEL, ACC_CTRL6, ACC_CTRL6_I2_INT2);
+            err = writeReg(LSM303_ACCEL, ACC_INT1_CFG, (/*ACC_INTMODE_6DMOVE |*/ (sensitivity & ACC_INTCFG_AXIS_MASK)));
+        }
+
+//         if(!err) {
+//             err = writeReg(LSM303_ACCEL, ACC_CTRL5, (ctrl5 | ACC_CTRL5_D4D_INT2));
+//         }
+
+        if(!err) {
+            err = writeReg(LSM303_ACCEL, ACC_CTRL6, ACC_CTRL6_I2_INT1);
         }
     }
 
 	return err;
+}
+
+int32_t lsm303_acc_motionDetectRead(uint8_t* detect)
+{
+    return readReg(LSM303_ACCEL, ACC_INT1_SRC, detect);
 }
 
 int32_t lsm303_mag_start(const MAG_OPMODE_t MODE)
@@ -237,12 +254,14 @@ int32_t lsm303_mag_stop(void)
     uint8_t regA;       // hold the control register
 
     err = readReg(LSM303_MAG, MAG_CFG_A, &regA);
-    if(err != ERR_NONE) { return err; }
 
-    // no need to clear first, idle is set when both mode bits are high
-    regA |= MAG_MODE_IDLE;
+    if(!err) {
+        // no need to clear first, idle is set when both mode bits are high
+        regA |= MAG_MODE_IDLE;
+        err = writeReg(LSM303_MAG, MAG_CFG_A, regA);
+    }
 
-    return writeReg(LSM303_MAG, MAG_CFG_A, regA);
+    return err;
 }
 
 
@@ -369,7 +388,7 @@ int32_t lsm303_acc_FIFOread(AxesRaw_t* buf, const uint32_t LEN, bool* overrun)
 	err = readContinous(LSM303_ACCEL, ACC_OUT_X_L, (uint8_t*)buf, count*6);
 
     // return the error code, or the number of samples read if there is no error
-    err = (err == ERR_NONE ? count : err);
+    err = (err == ERR_NONE ? count*6 : err);
 	return err;
 }
 
