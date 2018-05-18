@@ -185,13 +185,14 @@ int32_t lsm303_acc_stop();
  */
 int32_t lsm303_acc_motionDetectStart(const uint8_t sensitivity, uint16_t threshold, uint8_t duration);
 
-/** @brief Set up register for accelerometer motion detection
+/** @brief reads the motion interrupt register to finds the cause
  *
  * This function check the motion interrupt register on each of the three axis
  * and return the a register state the motions: SWAY, SURGE and HEAVE.
+ * @param detect [IN] 8-bit value to store the interrupt flags as described by ACC_MOTION_AXIS_t
  * @return true if successful, system error code otherwise
  */
-int32_t lsm303_acc_motionDetectRead(uint32_t* reg_detect);
+static inline int32_t lsm303_acc_motionDetectRead(uint8_t* detect) { return readReg(LSM303_ACCEL, ACC_CTRL1, detect); }
 
 /** @brief Get the status of the accelerometer
  *

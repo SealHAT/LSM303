@@ -206,39 +206,6 @@ int32_t lsm303_acc_motionDetectStart(const uint8_t sensitivity, uint16_t thresho
 	return err;
 }
 
-
-int32_t lsm303_acc_motionDetectRead(uint32_t* reg_detect)
-{
-	int32_t err;        // error return for the function
-	uint8_t int2_src = 0x00;
-
-	err = readReg(LSM303_ACCEL, ACC_CTRL1, &int2_src);
-
-	if(int2_src & ACC_INTSRC_IA){
-		if(int2_src & (ACC_INTSRC_XL|ACC_INTSRC_XH)){ //x > threshold(g)
-			*reg_detect |= SWAY; //SWAY bit is enabled
-			}else{
-			*reg_detect &= ~(SWAY); //Clear SWAY bit
-		}
-
-		if(int2_src & (ACC_INTSRC_YL|ACC_INTSRC_YH)){ //x > threshold(g)
-			*reg_detect |= SURGE; //SURGE bit is enabled
-			}else{
-			*reg_detect &= ~SURGE; //Clear SURGE bit
-		}
-
-		if(int2_src & (ACC_INTSRC_ZL|ACC_INTSRC_ZH)){ //x > threshold(g)
-			*reg_detect |= HEAVE; //HEAVE bit is enabled
-			}else{
-			*reg_detect &= ~HEAVE; //Clear HEAVE bit
-		}
-	}else{
-		err = ERR_UNSUPPORTED_OP;
-	}
-
-	return err;
-}
-
 int32_t lsm303_mag_start(const MAG_OPMODE_t MODE)
 {
 	int32_t err;        // err return value
