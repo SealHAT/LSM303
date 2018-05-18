@@ -228,9 +228,9 @@ int32_t lsm303_mag_start(const MAG_OPMODE_t MODE)
 	int32_t err;        // err return value
 
     // reset the magnetometer memories then wait for restart
-    err = writeReg(LSM303_MAG, MAG_CFG_A, MAG_CFGA_SOFTRST);
+    err = writeReg(LSM303_MAG, MAG_CFG_A, MAG_CFGA_REBOOT);
     if(err < 0) { return err; }
-    delay_ms(5);
+    delay_ms(15);
 
     // set BDU and enable interrupt
     err = writeReg(LSM303_MAG, MAG_CFG_C, (MAG_CFGC_BDU | MAG_CFGC_INT_MAG) );
