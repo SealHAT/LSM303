@@ -131,8 +131,6 @@ int32_t lsm303_acc_startFIFO(const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MO
 
     // set FIFO watermark to 25 and set to stream mode
     err = writeReg(LSM303_ACCEL, ACC_FIFO_CTRL, (ACC_FIFO_STREAM|0x19));
-	uint8_t ctrl_reg;
-    err = readReg(LSM303_ACCEL, ACC_FIFO_CTRL, &ctrl_reg);
     if(err < 0) { return err; }
 
     // set watermark interrupt on pin 1
@@ -161,74 +159,74 @@ int32_t lsm303_acc_stop(void)
     return writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
 }
 
-int32_t lsm303_acc_setINT2(ACC_INT2_type_t mode, uint8_t threshold, uint8_t duration) //type, threshold, time
+int32_t lsm303_acc_motionDetectStart(const uint8_t sensitivity, uint16_t threshold, uint8_t duration)
 {
-	int32_t err;        // error return for the function
-	uint8_t reg5;
-	uint8_t reg6;
-	uint8_t thres_reg;       // ACC threshold setting register 
-	uint8_t cfg_reg;       // ACC INT2 control register 
-	int j;
-	
-	switch(currentScale) {
-		case ACC_FS_2G:  j = 0; 
-		break;
-		case ACC_FS_4G:  j = 1;
-		break;
-		case ACC_FS_8G:  j = 2;
-		break;
-		case ACC_FS_16G: j = 3;
-		break;
-		default: j = 0;
+	int32_t err = ERR_NONE; // error return for the function
+
+	// verify the threshold argument. do this first since it can set error to ERR_NONE
+    switch(currentScale) {
+		case ACC_FS_2G:  err = (threshold <= 2000u ? ERR_NONE : ERR_INVALID_ARG);
+                         threshold /= 16u;
+		                 break;
+		case ACC_FS_4G:  err = (threshold <= 4000u ? ERR_NONE : ERR_INVALID_ARG);
+                         threshold /= 32u;
+		                 break;
+        // because the LSB value is 62 and our max setting is 0x7F, 7874 is the max threshold in 8g mode
+		case ACC_FS_8G:  err = (threshold <= 8000u ? ERR_NONE : ERR_INVALID_ARG);
+                         threshold  = (threshold <= 7874u ? threshold : 7874u);
+                         threshold /= 62u;
+		                 break;
+		case ACC_FS_16G: err = (threshold <= 16000u ? ERR_NONE : ERR_INVALID_ARG);
+                         threshold /= 186u;
+		                 break;
+		default: err = ERR_FAILURE;
 	};
-	
-	err = readReg(LSM303_ACCEL, ACC_CTRL5, &reg5);
-	err = readReg(LSM303_ACCEL, ACC_CTRL6, &reg6);
-	
-	reg6 |= ACC_CTRL6_I2_INT2;
-	thres_reg = ((threshold) >> j); 
-	cfg_reg = (ACC_INT2_6DMOVE_XYZ); 
-	
-	if(mode == ACC_INT2_6D_en)
-	{
-		reg5 &= ~(ACC_INT2_4D_en);
-	}
-	else if(mode == ACC_INT2_4D_en){
-		reg5 |= (ACC_INT2_4D_en);
-	}
-	
-	err = writeReg(LSM303_ACCEL, ACC_INT2_THS, thres_reg); //Set threshold for interrupt 2
-	err = writeReg(LSM303_ACCEL, ACC_INT2_CFG, cfg_reg); //Enable 6D modes, all the axes and interrupt modes
-	err = writeReg(LSM303_ACCEL, ACC_INT2_DUR, duration); //Set the minimum duration of the Interrupt 2 event to be recognized
-	err = writeReg(LSM303_ACCEL, ACC_CTRL5, reg5);
-	err = writeReg(LSM303_ACCEL, ACC_CTRL6, reg6);
-	
-	if(err != ERR_NONE) { return err; }
+
+    // verify the duration argument
+    if(duration > 127) {
+        err = ERR_INVALID_ARG;
+    }
+
+    if(!err) {
+	    err = writeReg(LSM303_ACCEL, ACC_INT2_THS, (threshold & ACC_THS_MASK));
+
+        if(!err) {
+            err = writeReg(LSM303_ACCEL, ACC_INT2_DUR, (duration  & ACC_DUR_MASK));
+        }
+
+        if(!err) {
+            err = writeReg(LSM303_ACCEL, ACC_INT2_CFG, (ACC_INTMODE_6DMOVE | (sensitivity & ACC_INTCFG_AXIS_MASK)));
+        }
+
+        if(!err) {
+            err = writeReg(LSM303_ACCEL, ACC_CTRL6, ACC_CTRL6_I2_INT2);
+        }
+    }
 
 	return err;
 }
 
 
-int32_t lsm303_motion_detect(uint32_t* reg_detect)
+int32_t lsm303_acc_motionDetectRead(uint32_t* reg_detect)
 {
 	int32_t err;        // error return for the function
 	uint8_t int2_src = 0x00;
 
 	err = readReg(LSM303_ACCEL, ACC_CTRL1, &int2_src);
-	
+
 	if(int2_src & ACC_INTSRC_IA){
 		if(int2_src & (ACC_INTSRC_XL|ACC_INTSRC_XH)){ //x > threshold(g)
 			*reg_detect |= SWAY; //SWAY bit is enabled
 			}else{
 			*reg_detect &= ~(SWAY); //Clear SWAY bit
 		}
-	
+
 		if(int2_src & (ACC_INTSRC_YL|ACC_INTSRC_YH)){ //x > threshold(g)
 			*reg_detect |= SURGE; //SURGE bit is enabled
 			}else{
 			*reg_detect &= ~SURGE; //Clear SURGE bit
 		}
-	
+
 		if(int2_src & (ACC_INTSRC_ZL|ACC_INTSRC_ZH)){ //x > threshold(g)
 			*reg_detect |= HEAVE; //HEAVE bit is enabled
 			}else{
@@ -237,8 +235,6 @@ int32_t lsm303_motion_detect(uint32_t* reg_detect)
 	}else{
 		err = ERR_UNSUPPORTED_OP;
 	}
-	
-	if(err != ERR_NONE) { return err; }
 
 	return err;
 }
@@ -464,13 +460,13 @@ AxesSI_t lsm303_acc_getSI(AxesRaw_t* rawAccel)
 
 	switch(currentScale) {
     	case ACC_FS_2G:  j = 0;
-    	break;
+    	                 break;
     	case ACC_FS_4G:  j = 1;
-    	break;
+    	                 break;
     	case ACC_FS_8G:  j = 2;
-    	break;
+    	                 break;
     	case ACC_FS_16G: j = 3;
-    	break;
+    	                 break;
     	default: j = 4;
 	};
 

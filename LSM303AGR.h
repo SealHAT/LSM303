@@ -31,11 +31,6 @@ typedef struct {
 	float zAxis;
 } AxesSI_t;
 
-typedef enum {
-	ACC_INT2_4D_en,
-	ACC_INT2_6D_en,
-} ACC_INT2_type_t;
-
 typedef struct {
 	uint8_t sway;
 	uint8_t surge;
@@ -98,13 +93,31 @@ typedef enum {
 } MAG_OPMODE_t;
 
 typedef enum {
-	SWAY	= 0x10,
-	SURGE	= 0x20,
-	HEAVE	= 0x40,
-	
-	PITCH	= 0x80,
-	ROLL	= 0x0100,
-	YAW		= 0x0200
+    MOTION_INT_X_HIGH       = 0x02,
+    MOTION_INT_Y_HIGH       = 0x08,
+    MOTION_INT_Z_HIGH       = 0x20,
+    MOTION_INT_XY_HIGH      = 0x0A,
+    MOTION_INT_XZ_HIGH      = 0x22,
+    MOTION_INT_YZ_HIGH      = 0x28,
+    MOTION_INT_XYZ_HIGH     = 0x2A,
+
+    MOTION_INT_X_LOW        = 0x01,
+    MOTION_INT_Y_LOW        = 0x04,
+    MOTION_INT_Z_LOW        = 0x10,
+    MOTION_INT_XY_LOW       = 0x05,
+    MOTION_INT_XZ_LOW       = 0x11,
+    MOTION_INT_YZ_LOW       = 0x14,
+    MOTION_INT_XYZ_LOW      = 0x15,
+} ACC_MOTION_AXIS_t;
+
+typedef enum {
+	SWAY    = 0x10,
+	SURGE   = 0x20,
+	HEAVE   = 0x40,
+
+	PITCH   = 0x80,
+	ROLL    = 0x0100,
+	YAW     = 0x0200
 }D_MOTION_t;
 
 /** @brief initialize the lsm303 IMU sensor without starting it
@@ -150,21 +163,35 @@ int32_t lsm303_acc_startFIFO(const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MO
  */
 int32_t lsm303_acc_stop();
 
-/** @brief Set the type, threhold value and time for Interrupt 2
- * 
- *  This function states exactly the interrupt mode, threshold and minimum duration
- *  to activate interrupt 2 and set up the device properly.
- * @return true if successful, system error code otherwise
+/** @brief Set up the motion detection interrupt on the INT2 pin
+ *
+ * The threshold setting is set in hardware as a 7 bit number where the LSB of the value is
+ * dependent on the current scale setting. The LSB represents 16, 32, 62, or 186 milligravities
+ * in 2G, 4G, 8G, and 16G modes. This limits the resolution and max value of the thresholds.
+ * for example in 8G mode the maximum threshold that can fit in 7 bits is 7874. This function will
+ * adjust all input accordingly as long as the parameters given are equal to or less than the current
+ * sensitivity.
+ *
+ * @param mode [IN]
+ * @param threshold [IN] The Threshold of activation. This is used for both the positive
+ *                       and negative directions. The value passed in should be in milliGravities
+ *                       and the function will return ERR_INVALID_ARG if the threshold is
+ *                       greater than or equal to the sensitivity range currently set.
+ * @param duration [IN] The number of accelerometer samples where the threshold must be exceeded to
+ *                      trigger an interrupt. This results in a duration time of duration/sampleRate.
+ *                      The duration must be between 0 and 127. Values over 127 will result in a return
+ *                      value of ERR_INVALID_ARG.
+ * @return true if successful, system error code otherwise. If an error returns, no registers will have changed.
  */
-int32_t lsm303_acc_setINT2(ACC_INT2_type_t mode, uint8_t threshold, uint8_t duration);
+int32_t lsm303_acc_motionDetectStart(const uint8_t sensitivity, uint16_t threshold, uint8_t duration);
 
-/** @brief Set up register for accelerometer motion detection 
+/** @brief Set up register for accelerometer motion detection
  *
  * This function check the motion interrupt register on each of the three axis
  * and return the a register state the motions: SWAY, SURGE and HEAVE.
  * @return true if successful, system error code otherwise
  */
-int32_t lsm303_motion_detect(uint32_t* reg_detect);
+int32_t lsm303_acc_motionDetectRead(uint32_t* reg_detect);
 
 /** @brief Get the status of the accelerometer
  *
