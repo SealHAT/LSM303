@@ -49,7 +49,53 @@ static void I2C_UNBLOCK_BUS(const uint8_t SDA, const uint8_t SCL)
             gpio_toggle_pin_level(SCL);
         }
     }
+}
 
+void EXTERNAL_IRQ_0_init(void)
+{
+	hri_gclk_write_PCHCTRL_reg(GCLK, EIC_GCLK_ID, CONF_GCLK_EIC_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+	hri_mclk_set_APBAMASK_EIC_bit(MCLK);
+
+	// Set pin direction to input
+	gpio_set_pin_direction(IMU_INT1_XL, GPIO_DIRECTION_IN);
+
+	gpio_set_pin_pull_mode(IMU_INT1_XL,
+	                       // <y> Pull configuration
+	                       // <id> pad_pull_config
+	                       // <GPIO_PULL_OFF"> Off
+	                       // <GPIO_PULL_UP"> Pull-up
+	                       // <GPIO_PULL_DOWN"> Pull-down
+	                       GPIO_PULL_OFF);
+
+	gpio_set_pin_function(IMU_INT1_XL, PINMUX_PA20A_EIC_EXTINT4);
+
+	// Set pin direction to input
+	gpio_set_pin_direction(IMU_INT2_XL, GPIO_DIRECTION_IN);
+
+	gpio_set_pin_pull_mode(IMU_INT2_XL,
+	                       // <y> Pull configuration
+	                       // <id> pad_pull_config
+	                       // <GPIO_PULL_OFF"> Off
+	                       // <GPIO_PULL_UP"> Pull-up
+	                       // <GPIO_PULL_DOWN"> Pull-down
+	                       GPIO_PULL_OFF);
+
+	gpio_set_pin_function(IMU_INT2_XL, PINMUX_PA21A_EIC_EXTINT5);
+
+	// Set pin direction to input
+	gpio_set_pin_direction(IMU_INT_MAG, GPIO_DIRECTION_IN);
+
+	gpio_set_pin_pull_mode(IMU_INT_MAG,
+	                       // <y> Pull configuration
+	                       // <id> pad_pull_config
+	                       // <GPIO_PULL_OFF"> Off
+	                       // <GPIO_PULL_UP"> Pull-up
+	                       // <GPIO_PULL_DOWN"> Pull-down
+	                       GPIO_PULL_OFF);
+
+	gpio_set_pin_function(IMU_INT_MAG, PINMUX_PA27A_EIC_EXTINT15);
+
+	ext_irq_init();
 }
 
 void I2C_GPS_PORT_init(void)
@@ -437,51 +483,6 @@ void system_init(void)
 
 	gpio_set_pin_function(GPS_TXD, GPIO_PIN_FUNCTION_OFF);
 
-	// GPIO on PA20
-
-	// Set pin direction to input
-	gpio_set_pin_direction(IMU_INT1_XL, GPIO_DIRECTION_IN);
-
-	gpio_set_pin_pull_mode(IMU_INT1_XL,
-	                       // <y> Pull configuration
-	                       // <id> pad_pull_config
-	                       // <GPIO_PULL_OFF"> Off
-	                       // <GPIO_PULL_UP"> Pull-up
-	                       // <GPIO_PULL_DOWN"> Pull-down
-	                       GPIO_PULL_OFF);
-
-	gpio_set_pin_function(IMU_INT1_XL, GPIO_PIN_FUNCTION_OFF);
-
-	// GPIO on PA21
-
-	// Set pin direction to input
-	gpio_set_pin_direction(IMU_INT2_XL, GPIO_DIRECTION_IN);
-
-	gpio_set_pin_pull_mode(IMU_INT2_XL,
-	                       // <y> Pull configuration
-	                       // <id> pad_pull_config
-	                       // <GPIO_PULL_OFF"> Off
-	                       // <GPIO_PULL_UP"> Pull-up
-	                       // <GPIO_PULL_DOWN"> Pull-down
-	                       GPIO_PULL_OFF);
-
-	gpio_set_pin_function(IMU_INT2_XL, GPIO_PIN_FUNCTION_OFF);
-
-	// GPIO on PA27
-
-	// Set pin direction to input
-	gpio_set_pin_direction(IMU_INT_MAG, GPIO_DIRECTION_IN);
-
-	gpio_set_pin_pull_mode(IMU_INT_MAG,
-	                       // <y> Pull configuration
-	                       // <id> pad_pull_config
-	                       // <GPIO_PULL_OFF"> Off
-	                       // <GPIO_PULL_UP"> Pull-up
-	                       // <GPIO_PULL_DOWN"> Pull-down
-	                       GPIO_PULL_OFF);
-
-	gpio_set_pin_function(IMU_INT_MAG, GPIO_PIN_FUNCTION_OFF);
-
 	// GPIO on PB02
 
 	// Set pin direction to output
@@ -593,6 +594,8 @@ void system_init(void)
 	                   false);
 
 	gpio_set_pin_function(GPS_RESET, GPIO_PIN_FUNCTION_OFF);
+
+	EXTERNAL_IRQ_0_init();
 
 	I2C_GPS_init();
 

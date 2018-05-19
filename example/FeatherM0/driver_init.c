@@ -19,7 +19,7 @@ struct spi_m_sync_descriptor spi_dev;
 
 struct adc_sync_descriptor analog_in;
 
-struct i2c_m_sync_desc wire;
+struct i2c_m_sync_desc I2C_IMU;
 
 void analog_in_PORT_init(void)
 {
@@ -60,10 +60,10 @@ void hash_chk_init(void)
 	crc_sync_init(&hash_chk, DSU);
 }
 
-void wire_PORT_init(void)
+void I2C_IMU_PORT_init(void)
 {
 
-	gpio_set_pin_pull_mode(SDA,
+	gpio_set_pin_pull_mode(IMU_SDA,
 	                       // <y> Pull configuration
 	                       // <id> pad_pull_config
 	                       // <GPIO_PULL_OFF"> Off
@@ -71,9 +71,9 @@ void wire_PORT_init(void)
 	                       // <GPIO_PULL_DOWN"> Pull-down
 	                       GPIO_PULL_UP);
 
-	gpio_set_pin_function(SDA, PINMUX_PA22C_SERCOM3_PAD0);
+	gpio_set_pin_function(IMU_SDA, PINMUX_PA22C_SERCOM3_PAD0);
 
-	gpio_set_pin_pull_mode(SCL,
+	gpio_set_pin_pull_mode(IMU_SCL,
 	                       // <y> Pull configuration
 	                       // <id> pad_pull_config
 	                       // <GPIO_PULL_OFF"> Off
@@ -81,21 +81,21 @@ void wire_PORT_init(void)
 	                       // <GPIO_PULL_DOWN"> Pull-down
 	                       GPIO_PULL_UP);
 
-	gpio_set_pin_function(SCL, PINMUX_PA23C_SERCOM3_PAD1);
+	gpio_set_pin_function(IMU_SCL, PINMUX_PA23C_SERCOM3_PAD1);
 }
 
-void wire_CLOCK_init(void)
+void I2C_IMU_CLOCK_init(void)
 {
 	_pm_enable_bus_clock(PM_BUS_APBC, SERCOM3);
 	_gclk_enable_channel(SERCOM3_GCLK_ID_CORE, CONF_GCLK_SERCOM3_CORE_SRC);
 	_gclk_enable_channel(SERCOM3_GCLK_ID_SLOW, CONF_GCLK_SERCOM3_SLOW_SRC);
 }
 
-void wire_init(void)
+void I2C_IMU_init(void)
 {
-	wire_CLOCK_init();
-	i2c_m_sync_init(&wire, SERCOM3);
-	wire_PORT_init();
+	I2C_IMU_CLOCK_init();
+	i2c_m_sync_init(&I2C_IMU, SERCOM3);
+	I2C_IMU_PORT_init();
 }
 
 void spi_dev_PORT_init(void)
@@ -275,6 +275,21 @@ void system_init(void)
 {
 	init_mcu();
 
+	// GPIO on PA15
+
+	// Set pin direction to input
+	gpio_set_pin_direction(IMU_INT_MAG, GPIO_DIRECTION_IN);
+
+	gpio_set_pin_pull_mode(IMU_INT_MAG,
+	                       // <y> Pull configuration
+	                       // <id> pad_pull_config
+	                       // <GPIO_PULL_OFF"> Off
+	                       // <GPIO_PULL_UP"> Pull-up
+	                       // <GPIO_PULL_DOWN"> Pull-down
+	                       GPIO_PULL_OFF);
+
+	gpio_set_pin_function(IMU_INT_MAG, GPIO_PIN_FUNCTION_OFF);
+
 	// GPIO on PA17
 
 	// Set pin direction to output
@@ -289,10 +304,40 @@ void system_init(void)
 
 	gpio_set_pin_function(LED_BUILTIN, GPIO_PIN_FUNCTION_OFF);
 
+	// GPIO on PA18
+
+	// Set pin direction to input
+	gpio_set_pin_direction(IMU_INT1_XL, GPIO_DIRECTION_IN);
+
+	gpio_set_pin_pull_mode(IMU_INT1_XL,
+	                       // <y> Pull configuration
+	                       // <id> pad_pull_config
+	                       // <GPIO_PULL_OFF"> Off
+	                       // <GPIO_PULL_UP"> Pull-up
+	                       // <GPIO_PULL_DOWN"> Pull-down
+	                       GPIO_PULL_OFF);
+
+	gpio_set_pin_function(IMU_INT1_XL, GPIO_PIN_FUNCTION_OFF);
+
+	// GPIO on PA19
+
+	// Set pin direction to input
+	gpio_set_pin_direction(IMU_INT2_XL, GPIO_DIRECTION_IN);
+
+	gpio_set_pin_pull_mode(IMU_INT2_XL,
+	                       // <y> Pull configuration
+	                       // <id> pad_pull_config
+	                       // <GPIO_PULL_OFF"> Off
+	                       // <GPIO_PULL_UP"> Pull-up
+	                       // <GPIO_PULL_DOWN"> Pull-down
+	                       GPIO_PULL_OFF);
+
+	gpio_set_pin_function(IMU_INT2_XL, GPIO_PIN_FUNCTION_OFF);
+
 	analog_in_init();
 	hash_chk_init();
 
-	wire_init();
+	I2C_IMU_init();
 
 	spi_dev_init();
 

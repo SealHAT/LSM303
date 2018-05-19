@@ -12,7 +12,7 @@
 #include <atmel_start.h>	/* where the IO functions live */
 #include <stdint.h>
 #include <stdbool.h>
-#include "math.h"
+//#include "math.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -86,7 +86,25 @@ typedef enum {
     MAG_LP_100_HZ       = 0x1C
 } MAG_OPMODE_t;
 
+typedef enum {
+    MOTION_INT_X_HIGH       = 0x02,
+    MOTION_INT_Y_HIGH       = 0x08,
+    MOTION_INT_Z_HIGH       = 0x20,
+    MOTION_INT_XY_HIGH      = 0x0A,
+    MOTION_INT_XZ_HIGH      = 0x22,
+    MOTION_INT_YZ_HIGH      = 0x28,
+    MOTION_INT_XYZ_HIGH     = 0x2A,
 
+    MOTION_INT_X_LOW        = 0x01,
+    MOTION_INT_Y_LOW        = 0x04,
+    MOTION_INT_Z_LOW        = 0x10,
+    MOTION_INT_XY_LOW       = 0x05,
+    MOTION_INT_XZ_LOW       = 0x11,
+    MOTION_INT_YZ_LOW       = 0x14,
+    MOTION_INT_XYZ_LOW      = 0x15,
+
+    MOTION_INT_MASK         = 0x3F
+} ACC_MOTION_AXIS_t;
 
 /** @brief initialize the lsm303 IMU sensor without starting it
  *
@@ -130,6 +148,37 @@ int32_t lsm303_acc_startFIFO(const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MO
  * @return true if successful, system error code otherwise
  */
 int32_t lsm303_acc_stop();
+
+/** @brief Set up the motion detection interrupt on the INT2 pin
+ *
+ * The threshold setting is set in hardware as a 7 bit number where the LSB of the value is
+ * dependent on the current scale setting. The LSB represents 16, 32, 62, or 186 milligravities
+ * in 2G, 4G, 8G, and 16G modes. This limits the resolution and max value of the thresholds.
+ * for example in 8G mode the maximum threshold that can fit in 7 bits is 7874. This function will
+ * adjust all input accordingly as long as the parameters given are equal to or less than the current
+ * sensitivity.
+ *
+ * @param sensitivity [IN] some combination of axis to detect from the ACC_MOTION_AXIS_t enumeration.
+ * @param threshold [IN] The Threshold of activation. This is used for both the positive
+ *                       and negative directions. The value passed in should be in milliGravities
+ *                       and the function will return ERR_INVALID_ARG if the threshold is
+ *                       greater than or equal to the sensitivity range currently set.
+ * @param duration [IN] The number of accelerometer samples where the threshold must be exceeded to
+ *                      trigger an interrupt. This results in a duration time of duration/sampleRate.
+ *                      The duration must be between 0 and 127. Values over 127 will result in a return
+ *                      value of ERR_INVALID_ARG.
+ * @return true if successful, system error code otherwise. If an error returns, no registers will have changed.
+ */
+int32_t lsm303_acc_motionDetectStart(const uint8_t sensitivity, uint16_t threshold, uint8_t duration);
+
+/** @brief reads the motion interrupt register to finds the cause
+ *
+ * This function check the motion interrupt register on each of the three axis
+ * and return the a register state the motions: SWAY, SURGE and HEAVE.
+ * @param detect [IN] 8-bit value to store the interrupt flags as described by ACC_MOTION_AXIS_t
+ * @return true if successful, system error code otherwise
+ */
+int32_t lsm303_acc_motionDetectRead(uint8_t* detect);
 
 /** @brief Get the status of the accelerometer
  *
@@ -196,7 +245,7 @@ int32_t lsm303_acc_FIFOCount(void);
  * @param buf [OUT] pointer to a buffer of AxesRaw_t structures, must be a multiple of 6 bytes
  * @param LEN [IN] the number of structures in the buffer (number of bytes / 6)
  * @param overrun [OUT] optional flag to indicate FIFO overrun. Pass NULL if not used.
- * @return ERR_NONE if success, system error or I2C error if failure.
+ * @return Number of bytes read if successful, system error or I2C error if failure.
  */
 int32_t lsm303_acc_FIFOread(AxesRaw_t* buf, const uint32_t LEN, bool* overrun);
 

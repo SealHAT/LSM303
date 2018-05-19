@@ -81,9 +81,11 @@ int32_t lsm303_init(struct i2c_m_sync_desc *const WIRE)
 int32_t lsm303_acc_startBypass(const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MODE)
 {
     int32_t err;        // error return value
+    AxesRaw_t garbage;  // used to clear out old data
 
-    // reboot accelerometer memory contents
+    // reboot accelerometer memory contents, then delay to let is do it's thing
     err = writeReg(LSM303_ACCEL, ACC_CTRL5, ACC_CTRL5_BOOT);
+    delay_ms(2);
 
     // set the ODR, LPen bit, and enabled axis in register 1
     uint8_t reg1 = (MODE & 0xF8) | ACC_ENABLE_ALL;
@@ -96,13 +98,21 @@ int32_t lsm303_acc_startBypass(const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t 
     currentAccMode  = MODE;
 
     // write the control registers
-    err = writeReg(LSM303_ACCEL, ACC_CTRL3, ACC_CTRL3_I1_DRDY1);
-    if(err < 0) { return err; }
+    if(!err) {
+        err = writeReg(LSM303_ACCEL, ACC_CTRL3, ACC_CTRL3_I1_DRDY1);
+    }
 
-    err = writeReg(LSM303_ACCEL, ACC_CTRL4, reg4);
-    if(err < 0) { return err; }
+    if(!err) {
+        err = writeReg(LSM303_ACCEL, ACC_CTRL4, reg4);
+    }
 
-    err = writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
+    if(!err) {
+        err = writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
+    }
+
+    // garbage read to clear any old interrupts
+    lsm303_acc_rawRead(&garbage);
+
     return err;
 }
 
@@ -152,11 +162,83 @@ int32_t lsm303_acc_stop(void)
     uint8_t reg1;       // hold the first control register
 
     err = readReg(LSM303_ACCEL, ACC_CTRL1, &reg1);
-    if(err != ERR_NONE) { return err; }
 
-    reg1 &= ~(ACC_CTRL1_ODR);
+    if(!err) {
+        reg1 &= ~(ACC_CTRL1_ODR);
+        err = writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
+    }
 
-    return writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
+    return err;
+}
+
+int32_t lsm303_acc_motionDetectStart(const uint8_t sensitivity, uint16_t threshold, uint8_t duration)
+{
+	int32_t err = ERR_NONE; // error return for the function
+    uint8_t garbage;        // for reading and discarding eny pending interrupts
+
+	// verify the threshold argument. do this first since it can set error to ERR_NONE
+    switch(currentScale) {
+		case ACC_FS_2G:  err = (threshold <= 2000u ? ERR_NONE : ERR_INVALID_ARG);
+                         threshold /= 16u;
+		                 break;
+		case ACC_FS_4G:  err = (threshold <= 4000u ? ERR_NONE : ERR_INVALID_ARG);
+                         threshold /= 32u;
+		                 break;
+        // because the LSB value is 62 and our max setting is 0x7F, 7874 is the max threshold in 8g mode
+		case ACC_FS_8G:  err = (threshold <= 8000u ? ERR_NONE : ERR_INVALID_ARG);
+                         threshold  = (threshold <= 7874u ? threshold : 7874u);
+                         threshold /= 62u;
+		                 break;
+		case ACC_FS_16G: err = (threshold <= 16000u ? ERR_NONE : ERR_INVALID_ARG);
+                         threshold /= 186u;
+		                 break;
+		default: err = ERR_FAILURE;
+	};
+
+    // verify the duration argument
+    if(duration > 127 || (ACC_POWER_DOWN == currentAccMode)) {
+        err = ERR_INVALID_ARG;
+    }
+
+    readReg(LSM303_ACCEL, ACC_INT1_SRC, &garbage);
+
+    // Enable high-pass filter on Interrupt1 data. Use filtered data for output as well.
+    // Low pass filter set to 0x20 will filter out below .2  @ 50Hz (see AN4825 4.3.1)
+    if(!err) {
+        err = writeReg(LSM303_ACCEL, ACC_CTRL2, (ACC_CTRL2_HPIS1 | 0x20));
+    }
+
+    // route the interrupt AOI 1 signal to pad 2
+    if(!err) {
+        err = writeReg(LSM303_ACCEL, ACC_CTRL6, ACC_CTRL6_I2_INT1);
+    }
+
+    // set threshold to the user defined amount
+    if(!err) {
+	    err = writeReg(LSM303_ACCEL, ACC_INT1_THS, (threshold & ACC_THS_MASK));
+    }
+
+    // set duration of event to recognize (min duration)
+    if(!err) {
+        err = writeReg(LSM303_ACCEL, ACC_INT1_DUR, (duration  & ACC_DUR_MASK));
+    }
+
+    // dummy read of REF register to force HP filter to current acceleration value
+    if(!err) {
+        err = readReg(LSM303_ACCEL, ACC_REF, &garbage);
+    }
+
+    // set the events to use for interrupt triggering
+    if(!err) {
+        err = writeReg(LSM303_ACCEL, ACC_INT1_CFG, (sensitivity & ACC_INTCFG_AXIS_MASK));
+    }
+
+	return err;
+}
+
+int32_t lsm303_acc_motionDetectRead(uint8_t* detect)
+{
+    return readReg(LSM303_ACCEL, ACC_INT1_SRC, detect);
 }
 
 int32_t lsm303_mag_start(const MAG_OPMODE_t MODE)
@@ -164,9 +246,9 @@ int32_t lsm303_mag_start(const MAG_OPMODE_t MODE)
 	int32_t err;        // err return value
 
     // reset the magnetometer memories then wait for restart
-    err = writeReg(LSM303_MAG, MAG_CFG_A, MAG_CFGA_SOFTRST);
+    err = writeReg(LSM303_MAG, MAG_CFG_A, MAG_CFGA_REBOOT);
     if(err < 0) { return err; }
-    delay_ms(5);
+    delay_ms(15);
 
     // set BDU and enable interrupt
     err = writeReg(LSM303_MAG, MAG_CFG_C, (MAG_CFGC_BDU | MAG_CFGC_INT_MAG) );
@@ -190,12 +272,14 @@ int32_t lsm303_mag_stop(void)
     uint8_t regA;       // hold the control register
 
     err = readReg(LSM303_MAG, MAG_CFG_A, &regA);
-    if(err != ERR_NONE) { return err; }
 
-    // no need to clear first, idle is set when both mode bits are high
-    regA |= MAG_MODE_IDLE;
+    if(!err) {
+        // no need to clear first, idle is set when both mode bits are high
+        regA |= MAG_MODE_IDLE;
+        err = writeReg(LSM303_MAG, MAG_CFG_A, regA);
+    }
 
-    return writeReg(LSM303_MAG, MAG_CFG_A, regA);
+    return err;
 }
 
 
@@ -322,7 +406,7 @@ int32_t lsm303_acc_FIFOread(AxesRaw_t* buf, const uint32_t LEN, bool* overrun)
 	err = readContinous(LSM303_ACCEL, ACC_OUT_X_L, (uint8_t*)buf, count*6);
 
     // return the error code, or the number of samples read if there is no error
-    err = (err == ERR_NONE ? count : err);
+    err = (err == ERR_NONE ? count*6 : err);
 	return err;
 }
 
@@ -380,13 +464,13 @@ AxesSI_t lsm303_acc_getSI(AxesRaw_t* rawAccel)
 
 	switch(currentScale) {
     	case ACC_FS_2G:  j = 0;
-    	break;
+    	                 break;
     	case ACC_FS_4G:  j = 1;
-    	break;
+    	                 break;
     	case ACC_FS_8G:  j = 2;
-    	break;
+    	                 break;
     	case ACC_FS_16G: j = 3;
-    	break;
+    	                 break;
     	default: j = 4;
 	};
 

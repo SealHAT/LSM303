@@ -24,24 +24,6 @@ typedef enum {
 	MAG_LSM303AGR	= 0x40
 } IMU_DEV_ID_t;
 
-typedef struct {
-	uint8_t reg1;
-	uint8_t reg2;
-	uint8_t reg3;
-	uint8_t reg4;
-	uint8_t reg5;
-	uint8_t reg6;
-	uint8_t reg7;
-} accConfig_t;
-
-typedef struct {
-	uint8_t reg1;
-	uint8_t reg2;
-	uint8_t reg3;
-	uint8_t reg4;
-	uint8_t reg5;
-} magConfig_t;
-
 #define IMU_STATUS_DRDY     (0x07)
 #define IMU_STATUS_DOVF     (0xF0)
 typedef enum {
@@ -99,7 +81,7 @@ typedef enum {
     ACC_TIME_LIM     = 0x3B,
     ACC_TIME_LATENCY = 0x3C,
     ACC_TIME_WINDOW  = 0x3D,
-    ACC_ACT_TSH      = 0x3E,
+    ACC_ACT_THS      = 0x3E,
     ACC_ACT_DUR      = 0x3F
 } ACC_REG_t;
 
@@ -155,8 +137,8 @@ typedef enum {
 /*** ACCELEROMETER CONTROL REGISTER #2 ***/
 /*****************************************/
 typedef enum {
-	ACC_CTRL2_HPM			= 0xC0,
-    ACC_CTRL2_HPCF          = 0x30, /* Values unknown? no table in datasheet */
+	ACC_CTRL2_HPM			= 0xC0, /* No description in data sheet: see AN4825 section 4.3.1 */
+    ACC_CTRL2_HPCF          = 0x30, /* No Tables in Data sheet: see AN4825 section 4.3.1 */
     ACC_CTRL2_FDS           = 0x08,
     ACC_CTRL2_HPCLICK       = 0x04,
     ACC_CTRL2_HPIS2         = 0x02,
@@ -216,7 +198,7 @@ typedef enum {
 /*** ACCELEROMETER CONTROL REGISTER #5 ***/
 /*****************************************/
 typedef enum {
-    ACC_CTRL5_BOOT          = 0x80, 
+    ACC_CTRL5_BOOT          = 0x80,
     ACC_CTRL5_FIFO_EN       = 0x40,
     ACC_CTRL5_LIR_INT1      = 0x08,
     ACC_CTRL5_D4D_INT1      = 0x04,
@@ -284,6 +266,7 @@ typedef enum {
     ACC_INTCFG_YLIE         = 0x04,
     ACC_INTCFG_XHIE         = 0x02,
     ACC_INTCFG_XLIE         = 0x01,
+    ACC_INTCFG_AXIS_MASK    = 0x3F
 } ACC_INT_CFG_MASKS_t;
 
 typedef enum {
@@ -304,20 +287,21 @@ typedef enum {
     ACC_INTSRC_YL           = 0x04,
     ACC_INTSRC_XH           = 0x02,
     ACC_INTSRC_XL           = 0x01,
+    ACC_INT_SOURCE_MASK     = 0x3F
 } ACC_INT_SRC_MASKS_t;
 
 /********************************************/
 /*** ACCELEROMETER INTTERUPT THRESHOLD  ***/
 /********************************************/
 typedef enum {
-    ACC_THS                 = 0x7F  // based on LSB value for each Full Scale Setting, see datasheet
+    ACC_THS_MASK             = 0x7F  // based on LSB value for each Full Scale Setting, see datasheet
 } ACC_THRESHOLD_MASKS_t;
 
 /********************************************/
 /*** ACCELEROMETER INTTERUPT DURATION  ***/
 /********************************************/
 typedef enum {
-    ACC_DUR                 = 0x7F  // time measured in N/ODR where N is the contents of this register
+    ACC_DUR_MASK             = 0x7F  // time measured in N/ODR where N is the contents of this register
 } ACC_DURATION_MASKS_t;
 
 /********************************************/

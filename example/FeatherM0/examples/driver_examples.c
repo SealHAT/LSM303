@@ -73,14 +73,14 @@ void hash_chk_example(void)
 		;
 }
 
-void wire_example(void)
+void I2C_IMU_example(void)
 {
-	struct io_descriptor *wire_io;
+	struct io_descriptor *I2C_IMU_io;
 
-	i2c_m_sync_get_io_descriptor(&wire, &wire_io);
-	i2c_m_sync_enable(&wire);
-	i2c_m_sync_set_slaveaddr(&wire, 0x12, I2C_M_SEVEN);
-	io_write(wire_io, (uint8_t *)"Hello World!", 12);
+	i2c_m_sync_get_io_descriptor(&I2C_IMU, &I2C_IMU_io);
+	i2c_m_sync_enable(&I2C_IMU);
+	i2c_m_sync_set_slaveaddr(&I2C_IMU, 0x12, I2C_M_SEVEN);
+	io_write(I2C_IMU_io, (uint8_t *)"Hello World!", 12);
 }
 
 /**

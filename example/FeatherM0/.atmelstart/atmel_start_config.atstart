@@ -246,8 +246,8 @@ drivers:
         - name: CPU
           input: CPU
         configuration: {}
-  wire:
-    user_label: wire
+  I2C_IMU:
+    user_label: I2C_IMU
     definition: Atmel:SAMD21_Drivers:0.0.1::SAMD21G18A-MF::SERCOM3::driver_config_definition::I2C.Master.Standard~2FFast-mode::HAL:Driver:I2C.Master.Sync
     functionality: I2C
     api: HAL:Driver:I2C_Master_Sync
@@ -261,7 +261,7 @@ drivers:
       i2c_master_arch_sdahold: 300-600ns hold time
       i2c_master_arch_sexttoen: false
       i2c_master_arch_trise: 215
-      i2c_master_baud_rate: 400000
+      i2c_master_baud_rate: 200000
     optional_signals: []
     variant:
       specification: SDA=0, SCL=1
@@ -824,24 +824,42 @@ pads:
     mode: Digital input
     user_label: MISO
     configuration: null
+  IMU_INT_MAG:
+    name: PA15
+    definition: Atmel:SAMD21_Drivers:0.0.1::SAMD21G18A-MF::pad::PA15
+    mode: Digital input
+    user_label: IMU_INT_MAG
+    configuration: null
   LED_BUILTIN:
     name: PA17
     definition: Atmel:SAMD21_Drivers:0.0.1::SAMD21G18A-MF::pad::PA17
     mode: Digital output
     user_label: LED_BUILTIN
     configuration: null
-  SDA:
+  IMU_INT1_XL:
+    name: PA18
+    definition: Atmel:SAMD21_Drivers:0.0.1::SAMD21G18A-MF::pad::PA18
+    mode: Digital input
+    user_label: IMU_INT1_XL
+    configuration: null
+  IMU_INT2_XL:
+    name: PA19
+    definition: Atmel:SAMD21_Drivers:0.0.1::SAMD21G18A-MF::pad::PA19
+    mode: Digital input
+    user_label: IMU_INT2_XL
+    configuration: null
+  IMU_SDA:
     name: PA22
     definition: Atmel:SAMD21_Drivers:0.0.1::SAMD21G18A-MF::pad::PA22
     mode: I2C
-    user_label: SDA
+    user_label: IMU_SDA
     configuration:
       pad_pull_config: Pull-up
-  SCL:
+  IMU_SCL:
     name: PA23
     definition: Atmel:SAMD21_Drivers:0.0.1::SAMD21G18A-MF::pad::PA23
     mode: I2C
-    user_label: SCL
+    user_label: IMU_SCL
     configuration:
       pad_pull_config: Pull-up
   USB_N:

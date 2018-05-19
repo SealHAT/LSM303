@@ -1,58 +1,86 @@
 #include <atmel_start.h>
 #include <stdio.h>
+#include "hal_atomic.h"
 #include "LSM303AGR.h"
 #include "analyze.h"
 #include "SerialPrint.h"
 
-#define STRING_SIZE          (64)
-#define BUFFER_SIZE          (32)
+int32_t printAxis(AxesSI_t* reading, const bool motion);
 
-int32_t printAxis(AxesSI_t* reading);
+volatile bool    accDataReady;
+volatile bool    magDataReady;
+volatile bool    motionDetected;
+volatile uint8_t detect;                   // to read out motion detection values
+
+static void irq_AccDataReady(void) {
+    accDataReady = true;
+}
+
+static void irq_MagDataReady(void) {
+    magDataReady = true;
+}
+
+static void irq_motionDetect(void) {
+    motionDetected = true;
+    lsm303_acc_motionDetectRead(&detect);
+}
 
 int main(void)
 {
+    static const int BUFFER_SIZE = 32u;
     AxesRaw_t xcel[BUFFER_SIZE];	    // Accelerometer reading
+    AxesRaw_t xcelSingle;
     AxesRaw_t mag;					    // Magnetometer  reading
     int32_t   err;                      // error code catcher
     bool      ovflw;                    // catch overflows
+
+    accDataReady = false;
+    motionDetected = false;
 
     atmel_start_init();
 
     // initialize the I2C for the IMU
     lsm303_init(&I2C_IMU);
 
+
+    ext_irq_register(IMU_INT1_XL, irq_AccDataReady);
+    ext_irq_register(IMU_INT2_XL, irq_motionDetect);
+    ext_irq_register(IMU_INT_MAG, irq_MagDataReady);
+
     // start the IMU in FIFO mode with the appropriate scale and rate
-    lsm303_acc_startFIFO(ACC_SCALE_2G, ACC_HR_50_HZ);
+    err = lsm303_acc_startBypass(ACC_SCALE_2G, ACC_HR_50_HZ);
+    err = lsm303_acc_motionDetectStart(0x01, 250, 0);
 
     // start the magnetometer at the given rate
-    lsm303_mag_start(MAG_LP_10_HZ);
+//    lsm303_mag_start(MAG_LP_10_HZ);
 
     for(;;) {
-        gpio_toggle_pin_level(LED_RED);
 
-        if(gpio_get_pin_level(IMU_INT1_XL)) {
-            err = lsm303_acc_FIFOread(xcel, BUFFER_SIZE, &ovflw);
+        if(accDataReady) {
+            accDataReady = false;
+            CRITICAL_SECTION_ENTER();
+            err = lsm303_acc_rawRead(&xcelSingle);
+            CRITICAL_SECTION_LEAVE();
 
             if(err < 0) {
-                gpio_set_pin_level(MOD8, true);
+                gpio_set_pin_level(LED_RED, false);
                 while(1) {;}
-            }
-
-            if(ovflw){
-                gpio_set_pin_level(MOD9, true);
             }
             else {
-                gpio_set_pin_level(MOD9, false);
+                AxesSI_t tempAxis = lsm303_acc_getSI(&xcelSingle);
+                printAxis(&tempAxis, motionDetected);
             }
+            motionDetected = false;
+            ovflw = false;
         }
 
-        if(gpio_get_pin_level(IMU_INT_MAG)) {
-            err = lsm303_mag_rawRead(&mag);
-            if(err != ERR_NONE) {
-                gpio_set_pin_level(MOD2, true);
-                while(1) {;}
-            }
-        }
+//         if(gpio_get_pin_level(IMU_INT_MAG)) {
+//             err = lsm303_mag_rawRead(&mag);
+//             if(err != ERR_NONE) {
+//                 gpio_set_pin_level(MOD2, true);
+//                 while(1) {;}
+//             }
+//         }
     } // FOREVER
 }
 
@@ -119,7 +147,8 @@ static int ftostr(double number, uint8_t digits, char* buff, const int LEN) {
     return n;
 }
 
-int32_t printAxis(AxesSI_t* reading) {
+#define STRING_SIZE     (64)
+int32_t printAxis(AxesSI_t* reading, const bool motion) {
     static char output[STRING_SIZE];
     int n = 0;
 
@@ -128,6 +157,7 @@ int32_t printAxis(AxesSI_t* reading) {
     n += ftostr(reading->yAxis, 3, &output[n], STRING_SIZE - n);
     output[n++] = ',';
     n += ftostr(reading->zAxis, 3, &output[n], STRING_SIZE - n);
-    output[n++] = '\n';
+    output[n++] = ',';
+    n+= snprintf(&output[n], STRING_SIZE - n, "%d\n", motion);
     return usb_write(output, n);
 }

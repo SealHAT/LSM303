@@ -17,14 +17,19 @@ extern "C" {
 /**
  *
  */
-float pitch_est(AxesSI_t Axes);
+int32_t get_pitch(AxesSI_t* Axes);
+
+
+int32_t get_roll(AxesSI_t* Axes);
 
 /**
  *
  */
-float roll_est(AxesSI_t Axes);
+int32_t get_yaw(AxesSI_t* Axes);
 
 //float yaw_est(AxesSI_t Axes);
+
+//uint32_t get_odba(AxesSI_t Axes);
 
 #ifdef __cplusplus
 }
