@@ -81,9 +81,11 @@ int32_t lsm303_init(struct i2c_m_sync_desc *const WIRE)
 int32_t lsm303_acc_startBypass(const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MODE)
 {
     int32_t err;        // error return value
+    AxesRaw_t garbage;  // used to clear out old data
 
-    // reboot accelerometer memory contents
+    // reboot accelerometer memory contents, then delay to let is do it's thing
     err = writeReg(LSM303_ACCEL, ACC_CTRL5, ACC_CTRL5_BOOT);
+    delay_ms(2);
 
     // set the ODR, LPen bit, and enabled axis in register 1
     uint8_t reg1 = (MODE & 0xF8) | ACC_ENABLE_ALL;
@@ -96,13 +98,21 @@ int32_t lsm303_acc_startBypass(const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t 
     currentAccMode  = MODE;
 
     // write the control registers
-    err = writeReg(LSM303_ACCEL, ACC_CTRL3, ACC_CTRL3_I1_DRDY1);
-    if(err < 0) { return err; }
+    if(!err) {
+        err = writeReg(LSM303_ACCEL, ACC_CTRL3, ACC_CTRL3_I1_DRDY1);
+    }
 
-    err = writeReg(LSM303_ACCEL, ACC_CTRL4, reg4);
-    if(err < 0) { return err; }
+    if(!err) {
+        err = writeReg(LSM303_ACCEL, ACC_CTRL4, reg4);
+    }
 
-    err = writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
+    if(!err) {
+        err = writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
+    }
+
+    // garbage read to clear any old interrupts
+    lsm303_acc_rawRead(&garbage);
+
     return err;
 }
 
@@ -195,7 +205,7 @@ int32_t lsm303_acc_motionDetectStart(const uint8_t sensitivity, uint16_t thresho
     // Enable high-pass filter on Interrupt1 data. Use filtered data for output as well.
     // Low pass filter set to 0x20 will filter out below .2  @ 50Hz (see AN4825 4.3.1)
     if(!err) {
-        err = writeReg(LSM303_ACCEL, ACC_CTRL2, (ACC_CTRL2_HPIS1 | ACC_CTRL2_FDS | 0x20));
+        err = writeReg(LSM303_ACCEL, ACC_CTRL2, (ACC_CTRL2_HPIS1 | 0x20));
     }
 
     // route the interrupt AOI 1 signal to pad 2

@@ -29,9 +29,13 @@ int main(void)
 {
     static const int BUFFER_SIZE = 32u;
     AxesRaw_t xcel[BUFFER_SIZE];	    // Accelerometer reading
+    AxesRaw_t xcelSingle;
     AxesRaw_t mag;					    // Magnetometer  reading
     int32_t   err;                      // error code catcher
     bool      ovflw;                    // catch overflows
+
+    accDataReady = false;
+    motionDetected = false;
 
     atmel_start_init();
 
@@ -44,8 +48,8 @@ int main(void)
     ext_irq_register(IMU_INT_MAG, irq_MagDataReady);
 
     // start the IMU in FIFO mode with the appropriate scale and rate
-    lsm303_acc_startFIFO(ACC_SCALE_2G, ACC_HR_50_HZ);
-    lsm303_acc_motionDetectStart(0x16, 100, 0);
+    err = lsm303_acc_startBypass(ACC_SCALE_2G, ACC_HR_50_HZ);
+    err = lsm303_acc_motionDetectStart(0x01, 250, 0);
 
     // start the magnetometer at the given rate
 //    lsm303_mag_start(MAG_LP_10_HZ);
@@ -55,23 +59,19 @@ int main(void)
         if(accDataReady) {
             accDataReady = false;
             CRITICAL_SECTION_ENTER();
-            err = lsm303_acc_FIFOread(xcel, BUFFER_SIZE, &ovflw);
+            err = lsm303_acc_rawRead(&xcelSingle);
             CRITICAL_SECTION_LEAVE();
 
             if(err < 0) {
                 gpio_set_pin_level(LED_RED, false);
                 while(1) {;}
             }
-            
-            int i;
-            for(i = 0; i < (err/6); i++) {
-                AxesSI_t tempAxis = lsm303_acc_getSI(&xcel[i]);
+            else {
+                AxesSI_t tempAxis = lsm303_acc_getSI(&xcelSingle);
                 printAxis(&tempAxis, motionDetected);
             }
-
             motionDetected = false;
             ovflw = false;
-
         }
 
 //         if(gpio_get_pin_level(IMU_INT_MAG)) {
