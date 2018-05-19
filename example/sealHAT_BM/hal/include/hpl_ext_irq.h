@@ -1,9 +1,9 @@
 /**
  * \file
  *
- * \brief IRQ related functionality declaration.
+ * \brief External IRQ related functionality declaration.
  *
- * Copyright (c) 2014-2018 Microchip Technology Inc. and its subsidiaries.
+ * Copyright (c) 2015-2018 Microchip Technology Inc. and its subsidiaries.
  *
  * \asf_license_start
  *
@@ -31,13 +31,13 @@
  *
  */
 
-#ifndef _HPL_IRQ_H_INCLUDED
-#define _HPL_IRQ_H_INCLUDED
+#ifndef _HPL_EXT_IRQ_H_INCLUDED
+#define _HPL_EXT_IRQ_H_INCLUDED
 
 /**
- * \addtogroup HPL IRQ
+ * \addtogroup HPL EXT IRQ
  *
- * \section hpl_irq_rev Revision History
+ * \section hpl_ext_irq_rev Revision History
  * - v1.0.0 Initial Release
  *
  *@{
@@ -50,67 +50,46 @@ extern "C" {
 #endif
 
 /**
- * \brief IRQ descriptor
- */
-struct _irq_descriptor {
-	void (*handler)(void *parameter);
-	void *parameter;
-};
-
-/**
  * \name HPL functions
  */
 //@{
 /**
- * \brief Retrieve current IRQ number
+ * \brief Initialize external interrupt module
  *
- * \return The current IRQ number
+ * This function does low level external interrupt configuration.
+ *
+ * \param[in] cb The pointer to callback function from external interrupt
+ *
+ * \return Initialization status.
+ * \retval -1 External irq module is already initialized
+ * \retval 0 The initialization is completed successfully
  */
-uint8_t _irq_get_current(void);
+int32_t _ext_irq_init(void (*cb)(const uint32_t pin));
 
 /**
- * \brief Disable the given IRQ
+ * \brief Deinitialize external interrupt module
  *
- * \param[in] n The number of IRQ to disable
+ * \return Initialization status.
+ * \retval -1 External irq module is already deinitialized
+ * \retval 0 The de-initialization is completed successfully
  */
-void _irq_disable(uint8_t n);
+int32_t _ext_irq_deinit(void);
 
 /**
- * \brief Set the given IRQ
+ * \brief Enable / disable external irq
  *
- * \param[in] n The number of IRQ to set
+ * \param[in] pin Pin to enable external irq on
+ * \param[in] enable True to enable, false to disable
+ *
+ * \return Status of external irq enabling / disabling
+ * \retval -1 External irq module can't be enabled / disabled
+ * \retval 0 External irq module is enabled / disabled successfully
  */
-void _irq_set(uint8_t n);
-
-/**
- * \brief Clear the given IRQ
- *
- * \param[in] n The number of IRQ to clear
- */
-void _irq_clear(uint8_t n);
-
-/**
- * \brief Enable the given IRQ
- *
- * \param[in] n The number of IRQ to enable
- */
-void _irq_enable(uint8_t n);
-
-/**
- * \brief Register IRQ handler
- *
- * \param[in] number The number registered IRQ
- * \param[in] irq The pointer to irq handler to register
- *
- * \return The status of IRQ handler registering
- * \retval -1 Passed parameters were invalid
- * \retval 0 The registering is completed successfully
- */
-void _irq_register(const uint8_t number, struct _irq_descriptor *const irq);
+int32_t _ext_irq_enable(const uint32_t pin, const bool enable);
 //@}
 
 #ifdef __cplusplus
 }
 #endif
 /**@}*/
-#endif /* _HPL_IRQ_H_INCLUDED */
+#endif /* _HPL_EXT_IRQ_H_INCLUDED */

@@ -31,12 +31,6 @@ typedef struct {
 	float zAxis;
 } AxesSI_t;
 
-typedef struct {
-	uint8_t sway;
-	uint8_t surge;
-	uint8_t heave;
-} MOTION_t;
-
 /* Valid modes for the LSM303AGR */
 typedef enum {
     ACC_POWER_DOWN      = 0x00,

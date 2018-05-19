@@ -164,7 +164,7 @@ int32_t lsm303_acc_stop(void)
 int32_t lsm303_acc_motionDetectStart(const uint8_t sensitivity, uint16_t threshold, uint8_t duration)
 {
 	int32_t err = ERR_NONE; // error return for the function
-    uint8_t ctrl5;
+    uint8_t garbage;        // for reading and discarding eny pending interrupts
 
 	// verify the threshold argument. do this first since it can set error to ERR_NONE
     switch(currentScale) {
@@ -186,33 +186,41 @@ int32_t lsm303_acc_motionDetectStart(const uint8_t sensitivity, uint16_t thresho
 	};
 
     // verify the duration argument
-    if(duration > 127) {
+    if(duration > 127 || (ACC_POWER_DOWN == currentAccMode)) {
         err = ERR_INVALID_ARG;
     }
 
+    readReg(LSM303_ACCEL, ACC_INT1_SRC, &garbage);
+
+    // Enable high-pass filter on Interrupt1 data. Use filtered data for output as well.
+    // Low pass filter set to 0x20 will filter out below .2  @ 50Hz (see AN4825 4.3.1)
     if(!err) {
-//         err = readReg(LSM303_ACCEL, ACC_CTRL5, &ctrl5);
-        readReg(LSM303_ACCEL, ACC_INT1_SRC, &ctrl5);
+        err = writeReg(LSM303_ACCEL, ACC_CTRL2, (ACC_CTRL2_HPIS1 | ACC_CTRL2_FDS | 0x20));
+    }
 
-        if(!err) {
-	        err = writeReg(LSM303_ACCEL, ACC_INT1_THS, (threshold & ACC_THS_MASK));
-        }
+    // route the interrupt AOI 1 signal to pad 2
+    if(!err) {
+        err = writeReg(LSM303_ACCEL, ACC_CTRL6, ACC_CTRL6_I2_INT1);
+    }
 
-        if(!err) {
-            err = writeReg(LSM303_ACCEL, ACC_INT1_DUR, (duration  & ACC_DUR_MASK));
-        }
+    // set threshold to the user defined amount
+    if(!err) {
+	    err = writeReg(LSM303_ACCEL, ACC_INT1_THS, (threshold & ACC_THS_MASK));
+    }
 
-        if(!err) {
-            err = writeReg(LSM303_ACCEL, ACC_INT1_CFG, (/*ACC_INTMODE_6DMOVE |*/ (sensitivity & ACC_INTCFG_AXIS_MASK)));
-        }
+    // set duration of event to recognize (min duration)
+    if(!err) {
+        err = writeReg(LSM303_ACCEL, ACC_INT1_DUR, (duration  & ACC_DUR_MASK));
+    }
 
-//         if(!err) {
-//             err = writeReg(LSM303_ACCEL, ACC_CTRL5, (ctrl5 | ACC_CTRL5_D4D_INT2));
-//         }
+    // dummy read of REF register to force HP filter to current acceleration value
+    if(!err) {
+        err = readReg(LSM303_ACCEL, ACC_REF, &garbage);
+    }
 
-        if(!err) {
-            err = writeReg(LSM303_ACCEL, ACC_CTRL6, ACC_CTRL6_I2_INT1);
-        }
+    // set the events to use for interrupt triggering
+    if(!err) {
+        err = writeReg(LSM303_ACCEL, ACC_INT1_CFG, (sensitivity & ACC_INTCFG_AXIS_MASK));
     }
 
 	return err;

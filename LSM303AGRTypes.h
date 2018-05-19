@@ -81,7 +81,7 @@ typedef enum {
     ACC_TIME_LIM     = 0x3B,
     ACC_TIME_LATENCY = 0x3C,
     ACC_TIME_WINDOW  = 0x3D,
-    ACC_ACT_TSH      = 0x3E,
+    ACC_ACT_THS      = 0x3E,
     ACC_ACT_DUR      = 0x3F
 } ACC_REG_t;
 
@@ -137,8 +137,8 @@ typedef enum {
 /*** ACCELEROMETER CONTROL REGISTER #2 ***/
 /*****************************************/
 typedef enum {
-	ACC_CTRL2_HPM			= 0xC0,
-    ACC_CTRL2_HPCF          = 0x30, /* Values unknown? no table in datasheet */
+	ACC_CTRL2_HPM			= 0xC0, /* No description in data sheet: see AN4825 section 4.3.1 */
+    ACC_CTRL2_HPCF          = 0x30, /* No Tables in Data sheet: see AN4825 section 4.3.1 */
     ACC_CTRL2_FDS           = 0x08,
     ACC_CTRL2_HPCLICK       = 0x04,
     ACC_CTRL2_HPIS2         = 0x02,

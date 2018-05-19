@@ -349,6 +349,20 @@ void system_init(void)
 
 	gpio_set_pin_function(BATTERY_LEVEL, GPIO_PIN_FUNCTION_OFF);
 
+	// GPIO on PA03
+
+	// Set pin direction to output
+	gpio_set_pin_direction(MOD8, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_level(MOD8,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   false);
+
+	gpio_set_pin_function(MOD8, GPIO_PIN_FUNCTION_OFF);
+
 	// GPIO on PA10
 
 	// Set pin direction to input
@@ -499,20 +513,6 @@ void system_init(void)
 	// GPIO on PB08
 
 	// Set pin direction to output
-	gpio_set_pin_direction(MOD8, GPIO_DIRECTION_OUT);
-
-	gpio_set_pin_level(MOD8,
-	                   // <y> Initial level
-	                   // <id> pad_initial_level
-	                   // <false"> Low
-	                   // <true"> High
-	                   false);
-
-	gpio_set_pin_function(MOD8, GPIO_PIN_FUNCTION_OFF);
-
-	// GPIO on PB09
-
-	// Set pin direction to output
 	gpio_set_pin_direction(MOD9, GPIO_DIRECTION_OUT);
 
 	gpio_set_pin_level(MOD9,
@@ -523,6 +523,20 @@ void system_init(void)
 	                   false);
 
 	gpio_set_pin_function(MOD9, GPIO_PIN_FUNCTION_OFF);
+
+	// GPIO on PB09
+
+	// Set pin direction to output
+	gpio_set_pin_direction(MOD2, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_level(MOD2,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   false);
+
+	gpio_set_pin_function(MOD2, GPIO_PIN_FUNCTION_OFF);
 
 	// GPIO on PB10
 
