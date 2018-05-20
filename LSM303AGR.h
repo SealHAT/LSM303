@@ -147,7 +147,7 @@ int32_t lsm303_acc_startFIFO(const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MO
  * used mode will be preserved an can be resumed later.
  * @return true if successful, system error code otherwise
  */
-int32_t lsm303_acc_stop();
+int32_t lsm303_acc_toggle();
 
 /** @brief Set up the motion detection interrupt on the INT2 pin
  *
@@ -265,7 +265,7 @@ int32_t lsm303_mag_start(const MAG_OPMODE_t MODE);
  * used mode will be preserved an can be resumed later.
  * @return true if successful, system error code otherwise
  */
-int32_t lsm303_mag_stop(void);
+int32_t lsm303_mag_toggle(void);
 
 /** @brief Get the status of the magnetometer
  *

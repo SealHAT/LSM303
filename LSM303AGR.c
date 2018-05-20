@@ -87,9 +87,6 @@ int32_t lsm303_acc_startBypass(const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t 
     err = writeReg(LSM303_ACCEL, ACC_CTRL5, ACC_CTRL5_BOOT);
     delay_ms(2);
 
-    // set the ODR, LPen bit, and enabled axis in register 1
-    uint8_t reg1 = (MODE & 0xF8) | ACC_ENABLE_ALL;
-
     // set the HR bit mode in register 4 with bit #2 of the MODE parameter
 	uint8_t reg4 = (MODE & 0x04) << 1;
     reg4 |= (ACC_CTRL4_BDU | RANGE);
@@ -106,12 +103,13 @@ int32_t lsm303_acc_startBypass(const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t 
         err = writeReg(LSM303_ACCEL, ACC_CTRL4, reg4);
     }
 
+    // set the ODR, LPen bit, and enabled axis in register 1
     if(!err) {
-        err = writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
+        err = writeReg(LSM303_ACCEL, ACC_CTRL1, ((MODE & 0xF8) | ACC_ENABLE_ALL));
     }
 
     // garbage read to clear any old interrupts
-    lsm303_acc_rawRead(&garbage);
+    err = lsm303_acc_rawRead(&garbage);
 
     return err;
 }
@@ -122,33 +120,39 @@ int32_t lsm303_acc_startFIFO(const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MO
 
     // set FIFO to bypass and watermark to zero to get rid of any existing watermark interrupts
     err = writeReg(LSM303_ACCEL, ACC_FIFO_CTRL, ACC_FIFO_BYPASS);
-    if(err < 0) { return err; }
 
     // reboot accelerometer memory contents
-    err = writeReg(LSM303_ACCEL, ACC_CTRL5, ACC_CTRL5_BOOT);
-    if(err < 0) { return err; }
+    if(!err) {
+        err = writeReg(LSM303_ACCEL, ACC_CTRL5, ACC_CTRL5_BOOT);
+    }
 
     // set the HR bit mode in register 4 with bit #2 of the MODE parameter
 	uint8_t reg4 = (MODE & 0x04) << 1;
     reg4 |= (ACC_CTRL4_BDU | RANGE);
 
-    err = writeReg(LSM303_ACCEL, ACC_CTRL4, reg4);
-    if(err < 0) { return err; }
+    if(!err) {
+        err = writeReg(LSM303_ACCEL, ACC_CTRL4, reg4);
+    }
 
     // enable the FIFO
-    err = writeReg(LSM303_ACCEL, ACC_CTRL5, ACC_CTRL5_FIFO_EN);
-    if(err < 0) { return err; }
+    if(!err) {
+        err = writeReg(LSM303_ACCEL, ACC_CTRL5, ACC_CTRL5_FIFO_EN);
+    }
 
     // set FIFO watermark to 25 and set to stream mode
-    err = writeReg(LSM303_ACCEL, ACC_FIFO_CTRL, (ACC_FIFO_STREAM|0x19));
-    if(err < 0) { return err; }
+    if(!err) {
+        err = writeReg(LSM303_ACCEL, ACC_FIFO_CTRL, (ACC_FIFO_STREAM|0x19));
+    }
 
     // set watermark interrupt on pin 1
-    err = writeReg(LSM303_ACCEL, ACC_CTRL3, ACC_CTRL3_I1_WTM);
-    if(err < 0) { return err; }
+    if(!err) {
+        err = writeReg(LSM303_ACCEL, ACC_CTRL3, ACC_CTRL3_I1_WTM);
+    }
 
     // set the ODR, LPen bit, and enabled axis in register 1
-    err = writeReg(LSM303_ACCEL, ACC_CTRL1, (MODE & 0xF8) | ACC_ENABLE_ALL);
+    if(!err) {
+        err = writeReg(LSM303_ACCEL, ACC_CTRL1, (MODE & 0xF8) | ACC_ENABLE_ALL);
+    }
 
 	currentScale    = RANGE;
     currentAccMode  = MODE;
@@ -156,15 +160,20 @@ int32_t lsm303_acc_startFIFO(const ACC_FULL_SCALE_t RANGE, const ACC_OPMODE_t MO
     return err;
 }
 
-int32_t lsm303_acc_stop(void)
+int32_t lsm303_acc_toggle(void)
 {
-    int32_t err;        // error return for the function
-    uint8_t reg1;       // hold the first control register
+    int32_t err;     // error return for the function
+    uint8_t reg1;    // hold the first control register
 
     err = readReg(LSM303_ACCEL, ACC_CTRL1, &reg1);
 
     if(!err) {
-        reg1 &= ~(ACC_CTRL1_ODR);
+        if(ACC_ODR_POWER_DOWN == (reg1 & ACC_CTRL1_ODR)) {
+            reg1 = (currentAccMode & 0xF8) | ACC_ENABLE_ALL;
+        }
+        else {
+            reg1 &= ~(ACC_CTRL1_ODR);
+        }
         err = writeReg(LSM303_ACCEL, ACC_CTRL1, reg1);
     }
 
@@ -174,7 +183,7 @@ int32_t lsm303_acc_stop(void)
 int32_t lsm303_acc_motionDetectStart(const uint8_t sensitivity, uint16_t threshold, uint8_t duration)
 {
 	int32_t err = ERR_NONE; // error return for the function
-    uint8_t garbage;        // for reading and discarding eny pending interrupts
+    uint8_t garbage;        // for reading and discarding any pending interrupts
 
 	// verify the threshold argument. do this first since it can set error to ERR_NONE
     switch(currentScale) {
@@ -247,26 +256,29 @@ int32_t lsm303_mag_start(const MAG_OPMODE_t MODE)
 
     // reset the magnetometer memories then wait for restart
     err = writeReg(LSM303_MAG, MAG_CFG_A, MAG_CFGA_REBOOT);
-    if(err < 0) { return err; }
     delay_ms(15);
 
     // set BDU and enable interrupt
-    err = writeReg(LSM303_MAG, MAG_CFG_C, (MAG_CFGC_BDU | MAG_CFGC_INT_MAG) );
-    if(err < 0) { return err; }
+    if(!err) {
+        err = writeReg(LSM303_MAG, MAG_CFG_C, (MAG_CFGC_BDU | MAG_CFGC_INT_MAG) );
+    }
 
     // enable low pass filter
-    err |= writeReg(LSM303_MAG, MAG_CFG_B, 0x00 /* MAG_CFGB_LOWPASS_EN */);
-    if(err < 0) { return err; }
+    if(!err) {
+        err |= writeReg(LSM303_MAG, MAG_CFG_B, 0x00 /* MAG_CFGB_LOWPASS_EN */);
+    }
 
     // enable temperature compensation and set the mode and rate
-    err |= writeReg(LSM303_MAG, MAG_CFG_A, (MAG_TEMPCOMP_ENABLE | (MODE & 0x1F)) );
-    if(err < 0) { return err; }
+    if(!err) {
+        err |= writeReg(LSM303_MAG, MAG_CFG_A, (MAG_TEMPCOMP_ENABLE | (MODE & 0x1F)) );
+    }
 
     currentMagMode = MODE;
+
 	return err;
 }
 
-int32_t lsm303_mag_stop(void)
+int32_t lsm303_mag_toggle(void)
 {
     int32_t err;        // error return for the function
     uint8_t regA;       // hold the control register
@@ -274,8 +286,12 @@ int32_t lsm303_mag_stop(void)
     err = readReg(LSM303_MAG, MAG_CFG_A, &regA);
 
     if(!err) {
-        // no need to clear first, idle is set when both mode bits are high
-        regA |= MAG_MODE_IDLE;
+        if(MAG_MODE_IDLE == (regA & MAG_MODE_IDLE)){
+            regA &= ~(MAG_MODE_IDLE);
+        }
+        else {
+            regA |= MAG_MODE_IDLE;
+        }
         err = writeReg(LSM303_MAG, MAG_CFG_A, regA);
     }
 
@@ -289,16 +305,19 @@ int32_t lsm303_acc_dataready(void)
     uint8_t statusReg;      // register
 
     err = readReg(LSM303_ACCEL, ACC_STATUS, &statusReg);
-    if(err != ERR_NONE) { return err; }
 
-    // return overflow error if any data overflow bits are set.
-    // this also implies new data, so we make the error code positive
-    if(statusReg & IMU_STATUS_DOVF) {
-        return -ERR_OVERFLOW;
+    if(!err) {
+        // return overflow error if any data overflow bits are set.
+        // this also implies new data, so we make the error code positive
+        if(statusReg & IMU_STATUS_DOVF) {
+            err = -ERR_OVERFLOW;
+        }
+        else {
+            // return the ZYX DRDY bit, this will be a positive true value but not 1
+            err = (statusReg & ZYX_NEW_DATA_AVAILABLE);
+        }
     }
-
-    // return the ZYX DRDY bit, this will be a positive true value but not 1
-    return (statusReg & ZYX_NEW_DATA_AVAILABLE);
+    return err;
 }
 
 int32_t lsm303_mag_dataready(void)
@@ -307,16 +326,19 @@ int32_t lsm303_mag_dataready(void)
     uint8_t statusReg;      // register
 
     err = readReg(LSM303_MAG, MAG_STATUS_REG, &statusReg);
-    if(err != ERR_NONE) { return err; }
 
-    // return overflow error if any data overflow bits are set.
-    // this also implies new data, so we make the error code positive
-    if(statusReg & IMU_STATUS_DOVF) {
-        return -ERR_OVERFLOW;
+    if(!err) {
+        // return overflow error if any data overflow bits are set.
+        // this also implies new data, so we make the error code positive
+        if(statusReg & IMU_STATUS_DOVF) {
+            err = -ERR_OVERFLOW;
+        }
+        else {
+            // return the ZYX DRDY bit, this will be a positive true value but not 1
+            err = (statusReg & ZYX_NEW_DATA_AVAILABLE);
+        }
     }
-
-    // return the ZYX DRDY bit, this will be a positive true value but not 1
-    return (statusReg & ZYX_NEW_DATA_AVAILABLE);
+    return err;
 }
 
 int32_t lsm303_acc_rawRead(AxesRaw_t* rawRead)
@@ -332,7 +354,7 @@ int32_t lsm303_acc_FIFOWatermark(bool* overflow)
 
     err = readReg(LSM303_ACCEL, ACC_FIFO_SRC, &statusfifo_reg);
 
-    if(ERR_NONE == err) {
+    if(!err) {
         err = (statusfifo_reg & ACC_FIFOSRC_WTM);
 
         // set overflow if not NULL
@@ -350,7 +372,7 @@ int32_t lsm303_acc_FIFOOverrun(void)
 
     err = readReg(LSM303_ACCEL, ACC_FIFO_SRC, &statusfifo_reg);
 
-    if(ERR_NONE == err) {
+    if(!err) {
         err = (statusfifo_reg & ACC_FIFOSRC_OVRN);
     }
 	return err;
@@ -363,7 +385,7 @@ int32_t lsm303_acc_FIFOEmpty(void)
 
 	err = readReg(LSM303_ACCEL, ACC_FIFO_SRC, &statusfifo_reg);
 
-    if(ERR_NONE == err) {
+    if(!err) {
         err = (statusfifo_reg & ACC_FIFOSRC_EMPTY);
     }
 	return err;
@@ -376,7 +398,7 @@ int32_t lsm303_acc_FIFOCount(void)
 
     err = readReg(LSM303_ACCEL, ACC_FIFO_SRC, &statusfifo_reg);
 
-    if(ERR_NONE == err) {
+    if(!err) {
         err = (statusfifo_reg & ACC_FIFOSRC_FSS);
     }
     return err;
@@ -389,24 +411,25 @@ int32_t lsm303_acc_FIFOread(AxesRaw_t* buf, const uint32_t LEN, bool* overrun)
 
     // get the FIFO status, return error code if I2C fails
     err = readReg(LSM303_ACCEL, ACC_FIFO_SRC, &count);
-    if(err != ERR_NONE) { return err; }
 
-    // set the overrun flag if it is not null
-    if(overrun != NULL) {
-        *overrun = count & ACC_FIFOSRC_OVRN;
+    if(!err) {
+        // set the overrun flag if it is not null
+        if(overrun != NULL) {
+            *overrun = count & ACC_FIFOSRC_OVRN;
+        }
+
+        // get the number of unread samples by masking the lower 5 bits
+	    count = count & ACC_FIFOSRC_FSS;
+
+	    // adjust read size to be the smallest of the buffer length or available samples
+        count = (count >= LEN ? LEN : count);
+
+        // read the number of samples calculated
+	    err = readContinous(LSM303_ACCEL, ACC_OUT_X_L, (uint8_t*)buf, count*6);
+
+        // return the error code, or the number of bytes read if there is no error
+        err = ((ERR_NONE == err) ? count*6 : err);
     }
-
-    // get the number of unread samples by masking the lower 5 bits
-	count = count & ACC_FIFOSRC_FSS;
-
-	// adjust read size to be the smallest of the buffer length or available samples
-    count = (count >= LEN ? LEN : count);
-
-    // read the number of samples calculated
-	err = readContinous(LSM303_ACCEL, ACC_OUT_X_L, (uint8_t*)buf, count*6);
-
-    // return the error code, or the number of samples read if there is no error
-    err = (err == ERR_NONE ? count*6 : err);
 	return err;
 }
 
