@@ -9,10 +9,9 @@
 #ifndef LSM303AGR_H_
 #define LSM303AGR_H_
 
-#include <atmel_start.h>	/* where the IO functions live */
+#include "hal_i2c_m_sync.h" // device specific IO functions
+#include <hal_delay.h>
 #include <stdint.h>
-#include <stdbool.h>
-//#include "math.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -106,6 +105,14 @@ typedef enum {
     MOTION_INT_MASK         = 0x3F
 } ACC_MOTION_AXIS_t;
 
+typedef struct {
+    AxesRaw_t S;            // memory value, for internal use by algorithm
+    int16_t   threshold;    // threshold of motion to detect in milligravity
+    int16_t   duration;     // Duration of movement to detect. not used.
+    uint8_t   sensitivity;  // axis to check for motion as defined by ACC_MOTION_AXIS_t
+    uint8_t   hp;           // must be a value greater than 0
+} MOTION_DETECT_t;
+
 /** @brief initialize the lsm303 IMU sensor without starting it
  *
  * @param WIRE [IN] The I2C descriptor to use for the device
@@ -180,6 +187,15 @@ int32_t lsm303_acc_motionDetectStart(const uint8_t sensitivity, uint16_t thresho
  */
 int32_t lsm303_acc_motionDetectRead(uint8_t* detect);
 
+/** @brief Detects motion in software using a high pass filter and threshold
+ *
+ * @param filter [IN] motion detection struct. Must initialize S to zero before first use.
+ * @param buffer [IN] buffer of raw axis readings
+ * @param LEN [IN] length of the data buffer
+ * @return a bitwise or of the values in ACC_MOTION_AXIS_t
+ */
+uint8_t lsm303_motionDetectSoft(MOTION_DETECT_t* filter, AxesRaw_t* buffer, const uint16_t LEN);
+
 /** @brief Get the status of the accelerometer
  *
  * This function checks if there is a new set of data in the accelerometer.
@@ -211,6 +227,13 @@ int32_t lsm303_acc_rawRead(AxesRaw_t* rawRead);
  * @return AxiesSI struct containing the values in Gs, NAN if there is an error.
  */
 AxesSI_t lsm303_acc_getSI(AxesRaw_t* rawAccel);
+
+/** @brief convert milliGravities to the raw 16-bit integer value
+ *
+ * @param milliG [IN] the SI gravity value in milliGravities
+ * @return the raw reading equivalent as a right aligned 12-bit value. Based on current Full Scale.
+ */
+int16_t acc_MgToRaw(int16_t milliG);
 
 /** @brief Check if Watermark had been reached in FIFO buffer
  *
