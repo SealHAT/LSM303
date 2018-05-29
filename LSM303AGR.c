@@ -250,6 +250,50 @@ int32_t lsm303_acc_motionDetectRead(uint8_t* detect)
     return readReg(LSM303_ACCEL, ACC_INT1_SRC, detect);
 }
 
+uint8_t lsm303_motionDetectSoft(MOTION_DETECT_t* filter, AxesRaw_t* buffer, const uint16_t LEN)
+{
+    uint_fast8_t i;          // LCV for the for loop
+    AxesRaw_t    highpass;   // highpass filtered data for detection
+    int16_t      negThreash; // negative threshold calculated once
+    uint8_t      detection;  // return value
+
+    negThreash = filter->threshold * -1;
+
+    for(i=0; i < LEN; i++) {
+        // Perform exponential moving average low pass filtering. hard coded .5 alpha value.
+        // sensitivity. as Alpha gets smaller the cutoff gets lower
+        filter->S.xAxis = (buffer[i].xAxis >> filter->hp) + (filter->S.xAxis - (filter->S.xAxis >> filter->hp));
+        filter->S.yAxis = (buffer[i].yAxis >> filter->hp) + (filter->S.yAxis - (filter->S.yAxis >> filter->hp));
+        filter->S.zAxis = (buffer[i].zAxis >> filter->hp) + (filter->S.zAxis - (filter->S.zAxis >> filter->hp));
+
+        // get the highpass data by subtracting the low pass from the data
+        highpass.xAxis = buffer[i].xAxis - filter->S.xAxis;
+        highpass.yAxis = buffer[i].yAxis - filter->S.yAxis;
+        highpass.zAxis = buffer[i].zAxis - filter->S.zAxis;
+
+        // test for threshold detection
+        if((filter->sensitivity & MOTION_INT_X_HIGH) && (highpass.xAxis >= filter->threshold)) {
+            detection |= MOTION_INT_X_HIGH;
+        }
+        if((filter->sensitivity & MOTION_INT_X_LOW) && (highpass.xAxis <= negThreash)) {
+            detection |= MOTION_INT_X_LOW;
+        }
+        if((filter->sensitivity & MOTION_INT_Y_HIGH) && (highpass.yAxis >= filter->threshold)) {
+            detection |= MOTION_INT_Y_HIGH;
+        }
+        if((filter->sensitivity & MOTION_INT_Y_LOW) && (highpass.yAxis <= negThreash)) {
+            detection |= MOTION_INT_Y_LOW;
+        }
+        if((filter->sensitivity & MOTION_INT_Z_HIGH) && (highpass.zAxis >= filter->threshold)) {
+            detection |= MOTION_INT_Z_HIGH;
+        }
+        if((filter->sensitivity & MOTION_INT_Z_LOW) && (highpass.zAxis <= negThreash)) {
+            detection |= MOTION_INT_Z_LOW;
+        }
+    }
+    return detection;
+}
+
 int32_t lsm303_mag_start(const MAG_OPMODE_t MODE)
 {
 	int32_t err;        // err return value
@@ -438,29 +482,15 @@ int32_t lsm303_mag_rawRead(AxesRaw_t* rawMag)
     return readContinous(LSM303_MAG, MAG_OUTX_L, (uint8_t*)rawMag, 6);
 }
 
-AxesSI_t lsm303_acc_getSI(AxesRaw_t* rawAccel)
+static inline uint_fast8_t acc_getScaleConstant(void)
 {
-    // different Scales, there are 3 modes and 4 full scale settings. these are mg/LSB values from data sheet page 13.
-	static const float scale[3][4] = {{0.98, 1.95, 3.9, 11.72},
-                                      {3.9, 7.82, 15.63, 46.9},
-                                      {15.63, 31.26, 62.52, 187.58}};
-
-    int i;                      // holds index for power mode
-    int j;                      // index for scale setting
-    uint_fast8_t shift = 0;     // the shift amount depends on operating mode
-    AxesSI_t siAccel;           // the return value
+    // different Scales, there are 3 modes and 4 full scale settings. these are mg/LSB values from data sheet page 13. these are rounded ints from the STM API
+    static const uint8_t intScale[3][4] = {{1,   2,  4,  12},
+                                           {4,   8, 16,  48},
+                                           {16, 32, 64, 192}};
+    uint_fast8_t i, j;
 
     switch(currentAccMode) {
-        case ACC_HR_1_HZ:
-        case ACC_HR_10_HZ:
-        case ACC_HR_25_HZ:
-        case ACC_HR_50_HZ:
-        case ACC_HR_100_HZ:
-        case ACC_HR_200_HZ:
-        case ACC_HR_400_HZ:
-        case ACC_HR_1344_HZ: i = 0;
-                             shift = 4;
-                             break;
         case ACC_NORM_1_HZ:
         case ACC_NORM_10_HZ:
         case ACC_NORM_25_HZ:
@@ -469,7 +499,6 @@ AxesSI_t lsm303_acc_getSI(AxesRaw_t* rawAccel)
         case ACC_NORM_200_HZ:
         case ACC_NORM_400_HZ:
         case ACC_NORM_1344_HZ: i = 1;
-                               shift = 6;
                                break;
         case ACC_LP_1_HZ:
         case ACC_LP_10_HZ:
@@ -480,39 +509,87 @@ AxesSI_t lsm303_acc_getSI(AxesRaw_t* rawAccel)
         case ACC_LP_400_HZ:
         case ACC_LP_1620_HZ:
         case ACC_LP_5376_HZ: i = 2;
-                             shift = 8;
                              break;
-        default: i = 3;
+        case ACC_HR_1_HZ:
+        case ACC_HR_10_HZ:
+        case ACC_HR_25_HZ:
+        case ACC_HR_50_HZ:
+        case ACC_HR_100_HZ:
+        case ACC_HR_200_HZ:
+        case ACC_HR_400_HZ:
+        case ACC_HR_1344_HZ:
+        default :           i = 0;
     };
 
-	switch(currentScale) {
-    	case ACC_FS_2G:  j = 0;
-    	                 break;
-    	case ACC_FS_4G:  j = 1;
-    	                 break;
-    	case ACC_FS_8G:  j = 2;
-    	                 break;
-    	case ACC_FS_16G: j = 3;
-    	                 break;
-    	default: j = 4;
-	};
+    switch(currentScale) {
+        case ACC_FS_4G:  j = 1;
+                         break;
+        case ACC_FS_8G:  j = 2;
+                         break;
+        case ACC_FS_16G: j = 3;
+                         break;
+        case ACC_FS_2G:
+        default:         j = 0;
+    };
 
-    // return error value if the index are out of range
-    if(i >= 3 || j >= 4) {
-        siAccel.xAxis = NAN;
-        siAccel.yAxis = NAN;
-        siAccel.zAxis = NAN;
-    }
+    return intScale[i][j];
+}
 
-    // shift values to proper placement
-    rawAccel->xAxis >>= shift;
-    rawAccel->yAxis >>= shift;
-    rawAccel->zAxis >>= shift;
+static inline uint_fast8_t acc_getShift(void)
+{
+    uint_fast8_t shift;
+    switch(currentAccMode) {
+        case ACC_NORM_1_HZ:
+        case ACC_NORM_10_HZ:
+        case ACC_NORM_25_HZ:
+        case ACC_NORM_50_HZ:
+        case ACC_NORM_100_HZ:
+        case ACC_NORM_200_HZ:
+        case ACC_NORM_400_HZ:
+        case ACC_NORM_1344_HZ: shift = 6;
+                               break;
+        case ACC_LP_1_HZ:
+        case ACC_LP_10_HZ:
+        case ACC_LP_25_HZ:
+        case ACC_LP_50_HZ:
+        case ACC_LP_100_HZ:
+        case ACC_LP_200_HZ:
+        case ACC_LP_400_HZ:
+        case ACC_LP_1620_HZ:
+        case ACC_LP_5376_HZ: shift = 8;
+                             break;
+        case ACC_HR_1_HZ:
+        case ACC_HR_10_HZ:
+        case ACC_HR_25_HZ:
+        case ACC_HR_50_HZ:
+        case ACC_HR_100_HZ:
+        case ACC_HR_200_HZ:
+        case ACC_HR_400_HZ:
+        case ACC_HR_1344_HZ:
+        default :            shift = 4;
+    };
+    return shift;
+}
 
-    // calculate the axis in Gs
-	siAccel.xAxis = ( rawAccel->xAxis * scale[i][j] / 1000.0);
-	siAccel.yAxis = ( rawAccel->yAxis * scale[i][j] / 1000.0);
-	siAccel.zAxis = ( rawAccel->zAxis * scale[i][j] / 1000.0);
+int16_t acc_MgToRaw(int16_t milliG)
+{
+    uint_fast8_t scale = acc_getScaleConstant();
+    return (milliG / scale) << 4;   // magic number is hard coded shift for High Res mode
+}
+
+AxesSI_t lsm303_acc_getSI(AxesRaw_t* rawAccel)
+{
+    uint_fast8_t shift;     // the shift amount depends on operating mode
+    uint_fast8_t scale;     // scaling factor from given mode and ODR
+    AxesSI_t     siAccel;   // the return value
+
+    scale = acc_getScaleConstant();
+    shift = acc_getShift();
+
+    // Shift values into proper placement, then scale the value to calculate the axis in Gs
+	siAccel.xAxis = ( (rawAccel->xAxis >> shift) * scale / 1000.0);
+	siAccel.yAxis = ( (rawAccel->yAxis >> shift) * scale / 1000.0);
+	siAccel.zAxis = ( (rawAccel->zAxis >> shift) * scale / 1000.0);
 
 	return siAccel;
 }
