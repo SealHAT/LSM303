@@ -342,7 +342,7 @@ int32_t lsm303_acc_motionDetectRead(uint8_t* detect)
 void lsm303_acc_motionDetectSoft_init(MOTION_DETECT_t* filter, const int16_t threshold, const uint8_t sensitivity, const uint8_t scaler)
 {
         filter->sensitivity = sensitivity;
-        filter->threshold   = threshold;
+        filter->threshold   = threshold / acc_getScaleConstant();
         filter->duration    = 0;
         filter->hp          = scaler;
         filter->S.xAxis     = 0;
