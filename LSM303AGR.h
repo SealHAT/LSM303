@@ -187,6 +187,15 @@ int32_t lsm303_acc_motionDetectStart(const uint8_t sensitivity, uint16_t thresho
  */
 int32_t lsm303_acc_motionDetectRead(uint8_t* detect);
 
+/** @brief sets up the filter struct for software motion detection
+ *
+ * @param filter [IN] motion detection struct. Must initialize S to zero before first use.
+ * @param threshold [IN] threshold of detection in milligravities
+ * @param sensitivity [IN] Axis to detection motion on, combination of enum ACC_MOTION_AXIS_t
+ * @param scaler [IN] integer from 1-8, scales the high pass filter. suggested starting value of 1 (50% averaging)
+ */
+void lsm303_acc_motionDetectSoft_init(MOTION_DETECT_t* filter, const int16_t threshold, const uint8_t sensitivity, const uint8_t scaler);
+
 /** @brief Detects motion in software using a high pass filter and threshold
  *
  * @param filter [IN] motion detection struct. Must initialize S to zero before first use.
