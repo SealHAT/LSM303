@@ -9,8 +9,9 @@
 #define INT2_THRESHOLD		(0.5/0.016)//g
 #define INT2_DURATION		(0)//N/ODR
 
+
 int32_t printAxis(AxesSI_t* reading);
-int32_t printbuffer(int32_t* buffer);
+int32_t printbuffer(uint8_t* buffer);
 int32_t printval(uint32_t val);
 
 void I2C_UNBLOCK_BUS(const uint8_t SDA, const uint8_t SCL)
@@ -44,14 +45,12 @@ int main(void)
     AxesRaw_t xcel[BUFFER_SIZE];	    // Accelerometer reading
     AxesRaw_t mag;					    // Magnetometer  reading
     int32_t   err;                      // error code catcher
+	static char output[STRING_SIZE];
 
     bool      ovflw;                    // catch overflows
-	uint32_t reg_detect;
-//	int32_t count;
-// 	int32_t pitch[BUFFER_SIZE];
-// 	int32_t roll[BUFFER_SIZE];
-// 	AxesSI_t xcel_SI[BUFFER_SIZE];
-//uint32_t i;
+	static MOTION_DETECT_t filter;
+	uint8_t reg_detect;
+
 	
 
 	I2C_UNBLOCK_BUS(IMU_SDA, IMU_SCL);
@@ -65,14 +64,17 @@ int main(void)
 
     // start the magnetometer at the given rate
     lsm303_mag_start(MAG_LP_10_HZ);
-	
-	lsm303_acc_setINT2(ACC_INT2_4D_en, INT2_THRESHOLD, INT2_DURATION);
+	lsm303_acc_motionDetectSoft_init(&filter, 100, MOTION_INT_MASK, 1);
+	//lsm303_acc_setINT2(ACC_INT2_4D_en, INT2_THRESHOLD, INT2_DURATION);
 
     for(;;) {
 		
         if(gpio_get_pin_level(IMU_INT1_XL)) {
 			
             err = lsm303_acc_FIFOread(xcel, BUFFER_SIZE, &ovflw);
+			reg_detect =  lsm303_motionDetectSoft(&filter, xcel, (err/6));
+			gpio_set_pin_level(LED_BUILTIN, true);
+			delay_ms(100);
             if(err < 0) {
                 while(1) {;}
             }
@@ -80,28 +82,27 @@ int main(void)
             if(ovflw){;
             }
             else {
-				
+				gpio_set_pin_level(LED_BUILTIN, true);
+				if(usb_dtr()) {
+					if((reg_detect&MOTION_INT_X_HIGH)|(reg_detect&MOTION_INT_X_LOW)){
+						sprintf(output, "Sway! 0x: %02X \n", reg_detect);
+					}else if((reg_detect&MOTION_INT_Y_HIGH)|(reg_detect&MOTION_INT_Y_LOW)){
+						sprintf(output, "Surge! 0x: %02X \n", reg_detect);
+					}else if((reg_detect&MOTION_INT_Z_HIGH)|(reg_detect&MOTION_INT_Z_LOW)){
+						sprintf(output, "Heave! 0x: %02X \n", reg_detect);
+					}else{
+						sprintf(output, "No motion! %02X \n", reg_detect);
+					}
+					
+					usb_write((uint8_t*)output, strlen(output));
+					
+					if(err < 0) {
+						usb_write("ERROR!\n", 7);
+					} // USB ERROR
+				}  // USB DTR ON			
             }
         }
 		gpio_set_pin_level(LED_BUILTIN, false);
-		if(gpio_get_pin_level(IMU_INT2_XL)) {
-			gpio_set_pin_level(LED_BUILTIN, true);
-			err = lsm303_motion_detect(&reg_detect);
-			//delay_ms(50);
-			//gpio_set_pin_level(LED_BUILTIN, false);
-			//gpio_set_pin_level(LED_BUILTIN, false);
-			if(err < 0) {
-				while(1) {;}
-			}else {
-				if(usb_dtr()) {
-					err = printval(reg_detect);
- 					if(err < 0) {
-					usb_write("ERROR!\n", 7);
- 					} // USB ERROR
-			    }  // USB DTR ON
-				
-			}
-		}
 		
 		/*
         if(gpio_get_pin_level(IMU_INT_MAG)) {
@@ -192,7 +193,7 @@ int32_t printAxis(AxesSI_t* reading) {
     return usb_write(output, n);
 }
 
-int32_t printbuffer(int32_t* buffer) {
+int32_t printbuffer(uint8_t* buffer) {
 	static char output[STRING_SIZE];
 	int n = 0;
 
