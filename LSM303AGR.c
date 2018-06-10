@@ -5,8 +5,7 @@
  *  Author: hpan5
  */
 #include "LSM303AGR.h"
-#include "LSM303AGRTypes.h"
-#include "math.h"
+#include "LSM303AGR_private.h"
 
 static struct i2c_m_sync_desc lsm303c_sync; /* Structure for IMU communications */
 static ACC_FULL_SCALE_t currentScale    = ACC_SCALE_2G;
