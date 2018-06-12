@@ -55,6 +55,24 @@ typedef enum {
 } ACC_OPMODE_t;
 
 typedef enum {
+    ACC_POWER_MODE_MASK = 0x0F,
+    ACC_HIGH_RESOLUTION = 0x04,
+    ACC_NORMAL_POWER    = 0x00,
+    ACC_LOW_POWER       = 0x08
+} ACC_POWER_MODE_t;
+
+typedef enum {
+    ACC_RATE_MASK       = 0xF0,
+    ACC_1_HZ            = 0x10,
+    ACC_10_HZ           = 0x20,
+    ACC_25_HZ           = 0x30,
+    ACC_50_HZ           = 0x40,
+    ACC_100_HZ          = 0x50,
+    ACC_200_HZ          = 0x60,
+    ACC_400_HZ          = 0x70,
+} ACC_SAMPLE_RATE_t;
+
+typedef enum {
     ACC_SCALE_2G        = 0x00,
     ACC_SCALE_4G        = 0x10,
     ACC_SCALE_8G        = 0x20,
@@ -75,6 +93,14 @@ typedef enum {
     MAG_LP_50_HZ        = 0x18,
     MAG_LP_100_HZ       = 0x1C
 } MAG_OPMODE_t;
+
+typedef enum {
+    MAG_RATE_MASK       = 0x0F,
+    MAG_10_HZ           = 0x00,
+    MAG_20_HZ           = 0x04,
+    MAG_50_HZ           = 0x08,
+    MAG_100_HZ          = 0x0C,
+} MAG_SAMPLE_RATE_t;
 
 typedef enum {
     MOTION_INT_X_HIGH       = 0x02,
