@@ -9,13 +9,13 @@
 #define LSM303_TYPES_H_
 
 /* Structure to store and return 3-axis measurements */
-typedef struct {
+typedef struct __attribute__((__packed__)){
     int16_t xAxis;
     int16_t yAxis;
     int16_t zAxis;
 } AxesRaw_t;
 
-typedef struct {
+typedef struct __attribute__((__packed__)){
     float xAxis;
     float yAxis;
     float zAxis;
@@ -122,7 +122,7 @@ typedef enum {
     MOTION_INT_MASK         = 0x3F
 } ACC_MOTION_AXIS_t;
 
-typedef struct {
+typedef struct __attribute__((__packed__)){
     AxesRaw_t S;            // memory value, for internal use by algorithm
     int16_t   threshold;    // threshold of motion to detect in milligravity
     int16_t   duration;     // Duration of movement to detect. not used.
